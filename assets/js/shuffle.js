@@ -22,6 +22,19 @@ function shuffle_array(array) {
     }
 }
 
+function get_random_items(array, amount) {
+    let index_cache = {};
+    let result = [];
+    while (result.length < amount) {
+        let rand = Math.floor(Math.random() * array.length);
+        if (index_cache[rand] == undefined) {
+            result.push(array[rand]);
+            index_cache[rand] = true;
+        }
+    }
+    return result;
+}
+
 async function shuffle_and_play() {
     let playlist = $('#choose_playlist').val();
     let device = $('#choose_device').val();
@@ -44,12 +57,12 @@ async function shuffle_and_play() {
         play_button.text(`Retrieving Songs... [${progress} / ${total}]`)
     );
 
-    // Filter out is_local songs as they are not available across devices
-    songs = songs.filter((song) => song.is_local === false);
-
     // Shuffle songs
     play_button.text('Shuffling Songs');
     shuffle_array(songs);
+
+    // Filter out is_local songs as they are not available across devices
+    songs = songs.filter((song) => song.is_local === false);
 
     // Only do 99 songs at a time
     if (songs.length > 99) songs = songs.splice(0, 99);
