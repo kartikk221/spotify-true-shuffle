@@ -1,4 +1,4 @@
-const spotify_client_id = '0e188cfad9f3470ca424b84c2dc532df';
+const spotify_client_id = '0e188cfad9f3470ca424b84c2dc532df'; // Change this in your setup to your own Spotify OAuth application clientid
 const randomHex = (size) =>
     [...Array(size)]
         .map(() => Math.floor(Math.random() * 16).toString(16))
