@@ -8,25 +8,13 @@ body {
 .page-container {
     width: 100%;
     height: 100%;
-    background: black;
+    background: linear-gradient(300deg, black, #070707);
     border-radius: 20px;
     box-shadow: 8px 6px 17px 10px rgb(0 0 0 / 20%);
 }
 
-.spotify-bg-1 {
-    width: 60%;
-    opacity: 0.05;
-    position: absolute;
-    right: 62%;
-    top: 30%;
-}
-
-.spotify-bg-2 {
-    width: 30%;
-    opacity: 0.05;
-    position: absolute;
-    right: -10%;
-    top: 10%;
+.auth-container {
+    padding: 3rem;
 }
 
 .landing-title {
@@ -120,6 +108,7 @@ body {
     font-family: 'Poppins';
     font-weight: 600;
     margin-bottom: 0px;
+    max-width: 88%;
 }
 
 .song-subtitle {
@@ -154,4 +143,29 @@ body {
 .github-icon:hover {
     bottom: 53px;
     box-shadow: 0px 0px 25px 2px rgb(255 255 255 / 20%);
+}
+
+@media screen and (max-width: 540px) {
+    body {
+        padding: 15px;
+    }
+    .auth-container {
+        padding: 3rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    .song-title {
+        font-size: 0.9rem;
+        max-width: 75%;
+    }
+    .song-image {
+        width: 45px;
+        height: 45px;
+    }
+    .song-subtitle {
+        font-size: 0.6rem;
+    }
+    .github-icon {
+        display: none;
+    }
 }
