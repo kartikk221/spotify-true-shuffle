@@ -1,11 +1,10 @@
 <html>
     <head>
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1, shrink-to-fit=no"
-        />
         <!-- Primary Meta Tags -->
-        <title>True Shuffle For Spotify</title>
+        <title>True Shuffle | Spotify</title>
+        <link rel="icon" href="assets/images/spotify_favicon.png" />
+        <meta name="viewport" content="width=device-width" />
+        <meta charset="utf-8" />
         <meta name="title" content="True Shuffle For Spotify" />
         <meta
             name="description"
@@ -37,21 +36,23 @@
             property="twitter:image"
             content="https://shuffle.software/assets/images/meta-image.png"
         />
-        <link rel="icon" href="assets/images/spotify_favicon.png" />
-        <meta name="viewport" content="width=device-width" />
-        <meta charset="utf-8" />
-        <title>True Shuffle | Spotify</title>
+
+        <!-- Load Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" />
         <link
             href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&amp;display=swap"
             rel="stylesheet"
         />
+
+        <!-- Load CSS -->
         <link
             rel="stylesheet"
             href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
         />
         <link rel="stylesheet" href="assets/css/application.css" />
+
+        <!-- Load JS -->
         <script
             src="https://code.jquery.com/jquery-3.6.0.slim.js"
             integrity="sha256-HwWONEZrpuoh951cQD1ov2HUK5zA5DwJ1DNUXaM6FsY="
@@ -69,7 +70,7 @@
             ><img src="assets/images/github_black.png" class="github-icon-img"
         /></a>
         <div class="page-container" style="overflow-y: auto">
-            <div class="container p-5">
+            <div class="container auth-container">
                 <div class="row mb-3 mt-3">
                     <h1 class="landing-title">True Shuffle For</h1>
                 </div>
@@ -132,6 +133,15 @@
                             >
                                 Shuffle & Play
                             </button>
+                            <p
+                                class="landing-message mt-4"
+                                id="non_premium_user"
+                                style="display: none"
+                            >
+                                Your shuffled music has been placed inside a
+                                <strong>temporary</strong> playlist called
+                                <strong>True Shuffle Temporary</strong>.
+                            </p>
                         </div>
                     </div>
 
