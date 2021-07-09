@@ -1,3 +1,70 @@
+function copy_array(array) {
+    return array.slice(0);
+}
+
+function unbiased_shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+function spread_shuffle(array, length, iterations, spread = 4) {
+    // Partition array into chunks based on specified spread
+    let partitions = [];
+    let count = array.length;
+    let partition_length = Math.floor(count / spread);
+    for (let i = 1; i <= spread; i++) {
+        if (i == spread) {
+            partitions.push(array);
+        } else {
+            partitions.push(array.splice(0, partition_length));
+        }
+    }
+
+    // Perform unbiased shuffle on partitions once
+    for (let i = 0; i < partitions.length; i++) unbiased_shuffle(partitions[i]);
+
+    // Exchange values between partitions randomly
+    let modifications = iterations || count;
+    for (let i = 0; i < modifications; i++) {
+        // Choose 2 random partitions to exchange values
+        let from = partitions[Math.floor(Math.random() * partitions.length)];
+        let to = partitions[Math.floor(Math.random() * partitions.length)];
+
+        // Choose 2 random indexes and their values from each partition
+        let from_index = Math.floor(Math.random() * from.length);
+        let to_index = Math.floor(Math.random() * to.length);
+        let from_value = from[from_index];
+        let to_value = to[to_index];
+
+        // Exchange values between two indexes
+        from[from_index] = to_value;
+        to[to_index] = from_value;
+    }
+
+    if (length && length < count) {
+        let results = [];
+        let cursor = 0;
+        let indexes = partitions.map(() => 0);
+        for (let i = 0; i < length; i++) {
+            let partition = partitions[cursor];
+            let value = partition[indexes[cursor]];
+            results.push(value);
+
+            cursor++;
+            if (cursor >= partitions.length) cursor = 0;
+
+            indexes[cursor]++;
+            if (indexes[cursor] >= partition.length) indexes[cursor] = 0;
+        }
+
+        return results;
+    } else {
+        return [].concat(partitions);
+    }
+}
+
 async function shuffle_retrieve_songs(playlist_id, on_progress_change) {
     // Check local cache first
     let cache = spotify_profile.playlist_songs[playlist_id];
@@ -11,66 +78,85 @@ async function shuffle_retrieve_songs(playlist_id, on_progress_change) {
         on_progress_change
     );
 
+    // Filter songs to only retain non local songs
+    songs = songs.filter(({ is_local }) => is_local === false);
+
+    // Cache resolved songs for faster access in future
     spotify_profile.playlist_songs[playlist_id] = songs;
     return songs;
 }
 
-function shuffle_array(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-}
+function to_readable_date(date) {
+    const month_names = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+    ];
 
-function get_random_items(array, amount) {
-    let index_cache = {};
-    let result = [];
-    while (result.length < amount) {
-        let rand = Math.floor(Math.random() * array.length);
-        if (index_cache[rand] == undefined) {
-            result.push(array[rand]);
-            index_cache[rand] = true;
+    try {
+        let chunks = date.split('-');
+        let year = +chunks[0];
+        let month = month_names[+chunks[1] - 1];
+        let day = (+chunks[2]).toString();
+        if (day.endsWith('1')) {
+            day += 'st';
+        } else if (day.endsWith('2')) {
+            day += 'nd';
+        } else if (day.endsWith('3')) {
+            day += 'rd';
+        } else {
+            day += 'th';
         }
+
+        return `${month} ${day}, ${year}`;
+    } catch (error) {
+        return 'Invalid Format';
     }
-    return result;
 }
 
 async function shuffle_and_play() {
     let playlist = $('#choose_playlist').val();
     let device = $('#choose_device').val();
-    // let amount = $('#queue_amount').val();
 
+    // Validate selected parameters
     let playlist_object = spotify_profile.playlists_by_key[playlist];
     if (playlist == 'default' || playlist_object == undefined)
         return alert('Please Select a Valid Playlist');
     if (device == 'default') return alert('Please Select a Device');
-    /* if (amount == 'default' || isNaN(+amount))
-        return alert('Please Select A Valid Amount Of Songs To Shuffle');
-    amount = +amount; */
 
+    // Mark Shuffle & Play button in flight
     let play_button = $('#play_button');
     play_button.text('Processing').prop('disabled', true).addClass('disabled');
 
-    // Retrieve songs from playlist
+    // Retrieve songs for playlist and create a copy to prevent modification of original cache
     let total = playlist_object.tracks.total;
-    let songs = await shuffle_retrieve_songs(playlist, (progress) =>
+    let songs_lookup = await shuffle_retrieve_songs(playlist, (progress) =>
         play_button.text(`Retrieving Songs... [${progress} / ${total}]`)
     );
+    let songs = copy_array(songs_lookup);
 
-    // Shuffle songs
+    // Shuffle songs based on length and only be left with 100 songs in the end as that is playback API limit
     play_button.text('Shuffling Songs');
-    shuffle_array(songs);
-
-    // Filter out is_local songs as they are not available across devices
-    songs = songs.filter((song) => song.is_local === false);
-
-    // Only do 99 songs at a time
-    if (songs.length > 99) songs = songs.splice(0, 99);
+    let uris_cap = 100;
+    if (songs.length < uris_cap + 1) {
+        unbiased_shuffle(songs);
+    } else {
+        songs = spread_shuffle(songs, uris_cap);
+    }
 
     // Map song uris for Spotify API
     let song_uris = songs.map((song) => song.track.uri);
 
-    // Launch Playback
+    // Check for Spotify Premium With Shuffle Toggle
     play_button.text('Starting Playback');
     let is_premium = await toggle_playback_shuffle(
         get_access_token(),
@@ -78,17 +164,45 @@ async function shuffle_and_play() {
         false
     );
 
-    if (!is_premium) {
-        alert(
-            'We are sorry but currently Spotify only allows users who have their premium subscription service to work with required API technologies that we use in this tool. For this reason, Spotify shuffle cannot work with your Spotify account.'
+    // Launch Playback If User Has Premium
+    let reshuffle_message = 'Reshuffle & Play';
+    if (is_premium) {
+        await start_playback(get_access_token(), device, {
+            uris: song_uris,
+        });
+    } else {
+        // Retrieve temporary playlist
+        let playlist_object = spotify_profile.temporary.playlist;
+
+        // Create a new temporary playlist if one doesn't already exist
+        if (playlist_object === null) {
+            play_button.text('Creating Temporary Playlist');
+            playlist_object = await create_playlist(
+                get_access_token(),
+                spotify_profile.id,
+                spotify_profile.temporary.name,
+                'An Automatic Playlist Generated By True Shuffle from ' +
+                    location.origin +
+                    location.pathname,
+                false
+            );
+
+            spotify_profile.temporary.playlist = playlist_object;
+        }
+
+        // Update temporary playlist with shuffled song uris
+        play_button.text('Updating Temporary Playlist');
+        await replace_songs_in_playlist(
+            get_access_token(),
+            playlist_object.id,
+            song_uris
         );
-        return play_button.text('Spotify Premium Required');
+
+        reshuffle_message = 'Reshuffle & Update';
+        $('#non_premium_user').show();
     }
 
-    await start_playback(get_access_token(), device, {
-        uris: song_uris,
-    });
-
+    // Display shuffle results in application UI
     let shuffle_results = [];
     songs.forEach(({ track }) => {
         let title = track.name;
@@ -110,7 +224,9 @@ async function shuffle_and_play() {
                 }
                 <p class="song-title">
                     ${title}<br /><strong class="song-subtitle"
-                        >${artists}</strong
+                        >${artists} - Released On ${to_readable_date(
+            track.album.release_date
+        )}</strong
                     >
                 </p>
             </div>
@@ -120,42 +236,9 @@ async function shuffle_and_play() {
     $('#shuffle_results').html(shuffle_results.join('\n'));
     $('#shuffle_results_container').show();
 
+    // Re-Enable UI controls for reshuffling
     return play_button
-        .text('Reshuffle & Play')
+        .text(reshuffle_message)
         .prop('disabled', false)
         .removeClass('disabled');
-
-    /*
-
-    // Splice songs array to requested shuffle amount of songs
-    if (songs.length > amount) songs = songs.splice(0, amount);
-
-    // Retrieve temporary playlist
-    let playlist_object = spotify_profile.temporary.playlist;
-
-    // Create a new temporary playlist if one doesn't already exist
-    if (playlist_object === null) {
-        play_button.text('Creating Temporary Playlist');
-        playlist_object = await create_playlist(
-            get_access_token(),
-            spotify_profile.id,
-            spotify_profile.temporary.name,
-            'An Automatic Playlist Generated By True Shuffle from ' +
-                location.origin +
-                location.pathname,
-            false
-        );
-
-        spotify_profile.temporary.playlist = playlist_object;
-    }
-
-    // Update temporary playlist with shuffled song uris
-    play_button.text('Updating Temporary Playlist');
-    await replace_songs_in_playlist(
-        get_access_token(),
-        playlist_object.id,
-        song_uris
-    );
-
-    play_button.text('Starting Playback'); */
 }
