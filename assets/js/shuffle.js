@@ -47,12 +47,14 @@ async function shuffle_and_play() {
     // Filter out is_local songs as they are not available across devices
     songs = songs.filter((song) => song.is_local === false);
 
-    // Only do 99 songs at a time
-    if (songs.length > 99) songs = songs.splice(0, 99);
-
     // Shuffle songs
     play_button.text('Shuffling Songs');
     shuffle_array(songs);
+
+    // Only do 99 songs at a time
+    if (songs.length > 99) songs = songs.splice(0, 99);
+
+    // Map song uris for Spotify API
     let song_uris = songs.map((song) => song.track.uri);
 
     // Launch Playback
