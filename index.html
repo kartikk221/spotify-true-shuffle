@@ -1,0 +1,157 @@
+<html>
+    <head>
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, shrink-to-fit=no"
+        />
+        <link rel="icon" href="assets/images/spotify_favicon.png" />
+        <meta name="viewport" content="width=device-width" />
+        <meta charset="utf-8" />
+        <title>True Shuffle | Spotify</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&amp;display=swap"
+            rel="stylesheet"
+        />
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+        />
+        <link rel="stylesheet" href="assets/css/application.css" />
+        <script
+            src="https://code.jquery.com/jquery-3.6.0.slim.js"
+            integrity="sha256-HwWONEZrpuoh951cQD1ov2HUK5zA5DwJ1DNUXaM6FsY="
+            crossorigin="anonymous"
+        ></script>
+        <script type="text/javascript" src="assets/js/spotify.js"></script>
+        <script type="text/javascript" src="assets/js/shuffle.js"></script>
+        <script type="text/javascript" src="assets/js/main.js"></script>
+    </head>
+    <body>
+        <a
+            class="github-icon"
+            target="_blank"
+            href="https://github.com/kartikk221/spotify-true-shuffle"
+            ><img src="assets/images/github_black.png" class="github-icon-img"
+        /></a>
+        <div class="page-container" style="overflow-y: auto">
+            <div class="container p-5">
+                <div class="row mb-3 mt-3">
+                    <h1 class="landing-title">True Shuffle For</h1>
+                </div>
+                <div class="row mb-5">
+                    <img
+                        src="assets/images/spotify_white.png"
+                        class="w-100"
+                        style="max-width: 250px; margin: auto"
+                    />
+                </div>
+
+                <div
+                    id="auth_section"
+                    class="container"
+                    style="margin-top: 12%"
+                >
+                    <div class="row">
+                        <p class="landing-message">
+                            Please connect your Spotify account to get started.
+                        </p>
+                        <button
+                            id="connect_button"
+                            onclick="connect_with_spotify()"
+                            class="auth-button"
+                        >
+                            Connect With Spotify
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    id="application_section"
+                    class="container mt-5 p-4"
+                    style="display: none"
+                >
+                    <div class="row">
+                        <div class="col-12 m-auto">
+                            <select
+                                id="choose_playlist"
+                                class="w-100 page-select"
+                            >
+                                <option value="default">
+                                    Choose a Playlist
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-12 m-auto mt-3">
+                            <select
+                                id="choose_device"
+                                class="w-100 page-select"
+                            >
+                                <option value="default">Choose a Device</option>
+                            </select>
+                        </div>
+                        <div class="col-12 m-auto mt-3">
+                            <button
+                                id="play_button"
+                                class="auth-button application-button"
+                                onclick="shuffle_and_play()"
+                            >
+                                Shuffle & Play
+                            </button>
+                        </div>
+                    </div>
+
+                    <div
+                        class="row mt-5"
+                        id="shuffle_results_container"
+                        style="display: none"
+                    >
+                        <div class="row mb-3 mt-3">
+                            <h1 class="landing-title">Shuffle Results</h1>
+                        </div>
+                        <div id="shuffle_results"></div>
+                    </div>
+                </div>
+
+                <div
+                    class="container"
+                    id="loader_container"
+                    style="display: none"
+                >
+                    <div class="col-6 m-auto mt-5">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            xmlns:xlink="http://www.w3.org/1999/xlink"
+                            style="margin: auto; display: block"
+                            width="100px"
+                            height="200px"
+                            viewBox="0 0 100 100"
+                            preserveAspectRatio="xMidYMid"
+                        >
+                            <path
+                                d="M16 50A34 34 0 0 0 84 50A34 36 0 0 1 16 50"
+                                fill="#ffffff"
+                                stroke="none"
+                            >
+                                <animateTransform
+                                    attributeName="transform"
+                                    type="rotate"
+                                    dur="0.5405405405405405s"
+                                    repeatCount="indefinite"
+                                    keyTimes="0;1"
+                                    values="0 50 51;360 50 51"
+                                ></animateTransform>
+                            </path>
+                        </svg>
+                    </div>
+                    <div class="col-6 m-auto">
+                        <p class="landing-message" id="loader_message">
+                            Retrieving Your Spotify Playlists
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

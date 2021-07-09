@@ -1,0 +1,157 @@
+body {
+    padding: 30px;
+    background: white;
+    overflow: hidden;
+    color: white;
+}
+
+.page-container {
+    width: 100%;
+    height: 100%;
+    background: black;
+    border-radius: 20px;
+    box-shadow: 8px 6px 17px 10px rgb(0 0 0 / 20%);
+}
+
+.spotify-bg-1 {
+    width: 60%;
+    opacity: 0.05;
+    position: absolute;
+    right: 62%;
+    top: 30%;
+}
+
+.spotify-bg-2 {
+    width: 30%;
+    opacity: 0.05;
+    position: absolute;
+    right: -10%;
+    top: 10%;
+}
+
+.landing-title {
+    text-align: center;
+    font-family: 'Poppins';
+    font-weight: 600;
+}
+
+.landing-message {
+    text-align: center;
+    font-family: 'Poppins';
+    font-weight: 400;
+}
+
+.auth-button {
+    width: 100%;
+    border-radius: 10px;
+    background: black;
+    color: white;
+    border: 2px solid white;
+    font-family: 'Poppins';
+    font-weight: 600;
+    padding: 20px;
+    margin-top: 1rem;
+    max-width: 410px;
+    margin: auto;
+    margin-top: 15px;
+    font-size: 1.2rem;
+    transition: all .5s;
+    letter-spacing: 0px;
+}
+
+.auth-button:hover {
+    letter-spacing: 0.5px;
+    background: white;
+    color: black;
+}
+
+.auth-button.disabled {
+    opacity: 0.3;
+    background: white!important;
+    color: black!important;
+    letter-spacing: 0px!important;
+    user-select: none;
+}
+
+.page-select {
+    display: block;
+    padding: 1rem;
+    background: black;
+    border: 2px solid white;
+    border-radius: 10px;
+    color: white;
+    max-width: 300px;
+    margin: auto;
+    outline: none;
+}
+
+.application-button {
+    display: block;
+    margin: auto;
+    max-width: 300px;
+    font-size: 15px;
+    margin-top: 15px;
+    padding: 15px;
+}
+
+.song-element {
+    display: block;
+    margin: auto;
+    width: 100%;
+    max-width: 700px;
+    background: white;
+    border-radius: 15px;
+    padding: 10px;
+}
+
+.song-image {
+    width: 55px;
+    height: 55px;
+    border-radius: 15px;
+    float: left;
+    box-shadow: 2px 2px 5px 3px rgba(0, 0, 0, 0.15);
+}
+
+.song-title {
+    color: black;
+    font-size: 1.3rem;
+    float: left;
+    margin-left: 20px;
+    font-family: 'Poppins';
+    font-weight: 600;
+    margin-bottom: 0px;
+}
+
+.song-subtitle {
+    font-size: 0.8rem;
+    color: grey;
+    font-weight: 600;
+}
+
+.github-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    background: white;
+    float: right;
+    position: absolute;
+    right: 50px;
+    bottom: 50px;
+    cursor: pointer;
+    box-shadow: 0px 0px 25px 2px rgb(255 255 255 / 10%);
+    transition: all 0.3s;
+}
+
+.github-icon-img {
+    display: block;
+    width: 32px;
+    height: 32px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 9px;
+}
+
+.github-icon:hover {
+    bottom: 53px;
+    box-shadow: 0px 0px 25px 2px rgb(255 255 255 / 20%);
+}
