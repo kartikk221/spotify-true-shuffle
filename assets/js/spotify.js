@@ -1,3 +1,9 @@
+async function async_wait(milliseconds) {
+    return new Promise((resolve, _) =>
+        setTimeout((r) => r(), milliseconds, resolve)
+    );
+}
+
 async function get_user_profile(token) {
     let response = await fetch('https://api.spotify.com/v1/me', {
         method: 'GET',
@@ -10,12 +16,6 @@ async function get_user_profile(token) {
 
     let body = await response.json();
     return body;
-}
-
-async function async_wait(milliseconds) {
-    return new Promise((resolve, _) =>
-        setTimeout((r) => r(), milliseconds, resolve)
-    );
 }
 
 async function fetch_devices(token) {
@@ -58,6 +58,7 @@ async function fetch_all_playlists(token, limit = 50, offset = 0, delay = 150) {
             body.offset + limit
         );
 
+        // Concatenate original results with paginated results
         playlists = playlists.concat(paginated.playlists);
     }
 
