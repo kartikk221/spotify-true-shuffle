@@ -1,4 +1,4 @@
-# TrueShuffle: An open-source music shuffling web application for Spotify
+# TrueShuffle: An open-source music shuffling web application & player for Spotify
 ![alt text](https://shuffle.software/assets/images/meta-image.png)
 
 ## Motivation
