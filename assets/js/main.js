@@ -176,10 +176,13 @@ async function load_application() {
             )
             .show();
 
-        return $('#play_button')
+        $('#play_button')
             .text('No Devices Available')
             .addClass('disabled')
             .prop('disabled', true);
+
+        $('#application_section').show();
+        return application_loader(false, '');
     }
 
     // Update UI with playlist choices
