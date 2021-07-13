@@ -199,7 +199,13 @@ async function shuffle_and_play() {
         );
 
         reshuffle_message = 'Reshuffle & Update';
-        $('#non_premium_user').show();
+        $('#application_message')
+            .html(
+                `Your shuffled music has been placed inside a
+        <strong>temporary</strong> playlist called
+        <strong>True Shuffle Temporary</strong>.`
+            )
+            .show();
     }
 
     // Display shuffle results in application UI

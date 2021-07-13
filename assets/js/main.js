@@ -168,6 +168,20 @@ async function load_application() {
             spotify_profile.temporary.playlist = playlist;
     });
 
+    // Check if a valid device is available before enabling application
+    if (spotify_profile.devices.length == 0) {
+        $('#application_message')
+            .html(
+                `Please refresh the page when you have an active device with the Spotify application open. If you still do not see your device, you can play/pause any random song in your spotify application and then refresh this page.`
+            )
+            .show();
+
+        return $('#play_button')
+            .text('No Devices Available')
+            .addClass('disabled')
+            .prop('disabled', true);
+    }
+
     // Update UI with playlist choices
     let playlists_dom = [];
     spotify_profile.playlists.forEach((playlist) =>
