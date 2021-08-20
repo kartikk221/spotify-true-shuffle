@@ -9,7 +9,7 @@ function unbiased_shuffle(array) {
     }
 }
 
-function spread_shuffle(array, length, iterations, spread = 4) {
+function spread_shuffle(array, length, spread = 4, iterations) {
     // Partition array into chunks based on specified spread
     let partitions = [];
     let count = array.length;
@@ -169,7 +169,10 @@ async function shuffle_and_play() {
     if (songs.length < uris_cap + 1) {
         unbiased_shuffle(songs);
     } else {
-        songs = spread_shuffle(songs, uris_cap);
+        // Determine shuffle spread based on a sample size of 50 song batches
+        let sample_size = 50;
+        let spread = Math.max(Math.floor(songs.length / sample_size), 4);
+        songs = spread_shuffle(songs, uris_cap, spread);
     }
 
     // Map song uris for Spotify API
