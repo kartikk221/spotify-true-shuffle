@@ -72,11 +72,7 @@ async function shuffle_retrieve_songs(playlist_id, on_progress_change) {
 
     // Retrieve From Spotify API
     let token = get_access_token();
-    let songs = await fetch_all_playlist_songs(
-        token,
-        playlist_id,
-        on_progress_change
-    );
+    let songs = await fetch_all_playlist_songs(token, playlist_id, on_progress_change);
 
     // Filter songs to only retain non local songs
     songs = songs.filter(({ is_local }) => is_local === false);
@@ -138,11 +134,34 @@ async function shuffle_and_play() {
     play_button.text('Processing').prop('disabled', true).addClass('disabled');
 
     // Retrieve songs for playlist and create a copy to prevent modification of original cache
-    let total = playlist_object.tracks.total;
-    let songs_lookup = await shuffle_retrieve_songs(playlist, (progress) =>
-        play_button.text(`Retrieving Songs... [${progress} / ${total}]`)
-    );
-    let songs = copy_array(songs_lookup);
+    let songs;
+
+    // Attempt to retrieve songs from local cache first based on snapshot id
+    let cache_lookup = await get_playlist_songs(playlist_object.id, playlist_object.snapshot_id);
+    if (Array.isArray(cache_lookup)) {
+        songs = cache_lookup;
+    } else {
+        // Retrieve songs fresh from Spotify API
+        try {
+            let total = playlist_object.tracks.total;
+            let songs_lookup = await shuffle_retrieve_songs(playlist, (progress) =>
+                play_button.text(`Retrieving Songs... [${progress} / ${total}]`)
+            );
+
+            // Cache songs locally for faster access times
+            await store_playlist_songs(
+                playlist_object.id,
+                playlist_object.snapshot_id,
+                songs_lookup
+            );
+
+            // Duplicate original songs array to prevent ordering of memory cache
+            songs = copy_array(songs_lookup);
+        } catch (error) {
+            alert('Failed To Retrieve Songs From Spotify! Logged Error To Console');
+            return console.log(error);
+        }
+    }
 
     // Shuffle songs based on length and only be left with 100 songs in the end as that is playback API limit
     play_button.text('Shuffling Songs');
@@ -158,11 +177,7 @@ async function shuffle_and_play() {
 
     // Check for Spotify Premium With Shuffle Toggle
     play_button.text('Starting Playback');
-    let is_premium = await toggle_playback_shuffle(
-        get_access_token(),
-        device,
-        false
-    );
+    let is_premium = await toggle_playback_shuffle(get_access_token(), device, false);
 
     // Launch Playback If User Has Premium
     let reshuffle_message = 'Reshuffle & Play';
@@ -192,11 +207,7 @@ async function shuffle_and_play() {
 
         // Update temporary playlist with shuffled song uris
         play_button.text('Updating Temporary Playlist');
-        await replace_songs_in_playlist(
-            get_access_token(),
-            playlist_object.id,
-            song_uris
-        );
+        await replace_songs_in_playlist(get_access_token(), playlist_object.id, song_uris);
 
         reshuffle_message = 'Reshuffle & Update';
         $('#application_message')
@@ -214,8 +225,7 @@ async function shuffle_and_play() {
         let title = track.name;
         let artists = track.artists.map((artist) => artist.name).join(', ');
         let image;
-        if (Array.isArray(track.album.images))
-            image = track.album.images[0].url;
+        if (Array.isArray(track.album.images)) image = track.album.images[0].url;
 
         shuffle_results.push(`
         <div class="row mt-3">
@@ -243,8 +253,5 @@ async function shuffle_and_play() {
     $('#shuffle_results_container').show();
 
     // Re-Enable UI controls for reshuffling
-    return play_button
-        .text(reshuffle_message)
-        .prop('disabled', false)
-        .removeClass('disabled');
+    return play_button.text(reshuffle_message).prop('disabled', false).removeClass('disabled');
 }
