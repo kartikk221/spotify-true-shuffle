@@ -1,228 +1,199 @@
-const spotify_client_id = '0e188cfad9f3470ca424b84c2dc532df'; // Change this in your setup to your own Spotify OAuth application clientid
+let SPOTIFY_API;
+let SHUFFLE_MAX_BATCH_SAMPLE_SIZE = 50;
+let TEMPORARY_SHUFFLED_PLAYLIST_NAME = 'True Shuffle Results';
+let TEMPORARY_SHUFFLED_PLAYLIST_DESCRIPTION = `An Automatically Generated Playlist By True Shuffle from ${location.origin}`;
 
-function random_hex(size) {
-    return [...Array(size)]
-        .map(() => Math.floor(Math.random() * 16).toString(16))
-        .join('');
-}
+/**
+ * Begins the process of shuffling and playing music based on UI selected playlist/device.
+ */
+async function shuffle_and_play() {
+    // Retrieve the selected playlist and device
+    const device_id = document.getElementById('choose_device').value;
+    const playlist_id = document.getElementById('choose_playlist').value;
 
-function has_local_storage() {
+    // Retrieve the songs from the selected playlist
+    let songs;
     try {
-        localStorage.setItem('ls_test', 'true');
-        localStorage.removeItem('ls_test');
-        return true;
-    } catch (err) {
-        return false;
-    }
-}
-
-function handle_auth_callback() {
-    // Ensure hash is from Spotify
-    if (location.hash.indexOf('#access_token=') == -1)
-        return (location.hash = '');
-
-    // Parse hash parameters
-    let payload = {};
-    location.hash
-        .replace('#', '')
-        .split('&')
-        .forEach((chunk) => {
-            chunk = chunk.split('=');
-            if (chunk.length == 2) {
-                payload[chunk[0]] = decodeURIComponent(chunk[1]);
-            }
+        ui_render_play_button('Retrieving Songs...', false);
+        songs = await SPOTIFY_API.get_playlist_tracks(playlist_id, {
+            on_progress: (progress, total) => {
+                // Update the UI to display progress of network fetches
+                ui_render_play_button(`Retrieving Songs... [${progress} / ${total}]`, false);
+            },
         });
 
-    // Ensure a access_token and state is returned
-    if (
-        typeof payload.access_token !== 'string' ||
-        typeof payload.state !== 'string' ||
-        isNaN(+payload.expires_in)
-    )
-        return;
+        // Filter the retrieved songs to only include songs that are not local
+        songs = songs.filter((song) => !song.local);
+    } catch (error) {
+        log('ERROR', 'Failed to retrieve Spotify profile.');
+        alert('Failed to retrieve songs from Spotify. Refresh the page to try again.');
+        return console.log(error);
+    }
 
-    // Validate authentication hash
-    if (!verify_auth_hash(payload.state)) return (location.hash = '');
+    // Shuffle the songs array with a batch shuffle which batches with size up to 25 songs each batch
+    ui_render_play_button('Shuffling Songs...', false);
+    const size = Math.max(SHUFFLE_MAX_BATCH_SAMPLE_SIZE, Math.round(songs.length / 10));
+    const shuffled = songs.length <= 10 ? swap_shuffle(songs) : batch_swap_shuffle(songs, size);
+    const results = get_spread_batch(shuffled, 100, size);
+    const uris = results.map(({ uri }) => uri);
 
-    // Store access_token and it's expiry in localStorage for persisted session
-    localStorage.setItem('access_token', payload.access_token);
-    localStorage.setItem(
-        'access_token_expiry',
-        (Date.now() + +payload.expires_in * 1000).toString()
-    );
-    location.hash = '';
+    // Safely determine if the user is a Premium user by disabling shuffle
+    let is_premium;
+    try {
+        ui_render_play_button('Preparing Player...', false);
+        is_premium = await SPOTIFY_API.set_playback_shuffle(device_id, false);
+    } catch (error) {
+        log('ERROR', 'Failed to set playback shuffle to disabled.');
+        alert('Failed to disable playback shuffle in Spotify player.');
+        return console.log(error);
+    }
 
-    // Mark user device as returning_user for faster authentication
-    localStorage.setItem('returning_user', 'true');
-}
-
-let spotify_session;
-function get_access_token(reload_on_fail = true) {
-    if (spotify_session) {
-        const { token, expiry } = spotify_session;
-        if (Date.now() < expiry) return token;
+    // Spotify Premium User: Start playback with our shuffled results song uris
+    if (is_premium) {
+        try {
+            // Play the shuffled tracks in the selected device player
+            ui_render_play_button('Starting Playback...', false);
+            await SPOTIFY_API.play_tracks(device_id, {
+                uris,
+            });
+        } catch (error) {
+            log('ERROR', 'Failed to play shuffled tracks in selected device Spotify player.');
+            alert('Failed to play shuffled tracks in selected device Spotify player.');
+            return console.log(error);
+        }
     } else {
-        let token = localStorage.getItem('access_token');
-        let expiry = +localStorage.getItem('access_token_expiry');
-        if (Date.now() < expiry) {
-            spotify_session = {
-                token,
-                expiry,
-            };
+        // Spotify Free User: Create a temporary playlist to store the shuffled results song uris
+        const playlists = await SPOTIFY_API.get_playlists();
+        let temporary = Object.keys(playlists).find((id) => playlists[id].name === TEMPORARY_SHUFFLED_PLAYLIST_NAME);
 
-            return token;
+        // Create the temporary shuffle results playlist if it does not exist yet
+        if (!temporary)
+            try {
+                ui_render_play_button('Creating Temporary Playlist...', false);
+                temporary = await SPOTIFY_API.create_playlist(TEMPORARY_SHUFFLED_PLAYLIST_NAME, {
+                    description: TEMPORARY_SHUFFLED_PLAYLIST_DESCRIPTION,
+                    public: true,
+                });
+            } catch (error) {
+                log('ERROR', 'Failed to create temporary shuffle results playlist.');
+                alert('Failed to create temporary shuffle results playlist.');
+                return console.log(error);
+            }
+
+        // Set the shuffled tracks into the temporary playlist
+        try {
+            ui_render_play_button('Updating Temporary Playlist...', false);
+            await SPOTIFY_API.set_playlist_tracks(temporary.id, uris);
+        } catch (error) {
+            log('ERROR', 'Failed to store shuffled tracks into temporary playlist.');
+            alert('Failed to store shuffled tracks into temporary playlist.');
+            return console.log(error);
         }
+
+        // Render the application message to alert the user
+        ui_render_application_message(`Your shuffled music has been placed inside a
+        <strong>temporary</strong> playlist called
+        <strong>${TEMPORARY_SHUFFLED_PLAYLIST_NAME}</strong>.`);
     }
 
-    if (reload_on_fail) {
-        alert(
-            'You have been inactive for too long. Please connect your account again.'
-        );
-        location.reload();
-        throw new Error('Reloading Page'); // Throw this to prevent calling API request from being made
-    }
+    // Render the queued tracks in the UI
+    ui_render_queued_songs(results);
+
+    // Enable the UI button to allow the user to reshuffle and play music
+    ui_render_play_button('Reshuffle & Play', true);
 }
 
-function get_auth_hash(expiry_seconds = 5) {
-    let hash = random_hex(20);
-    localStorage.setItem(
-        'auth_hash',
-        `${hash}:${Date.now() + 1000 * expiry_seconds}`
-    );
-    return hash;
-}
-
-function verify_auth_hash(hash) {
-    let lookup = localStorage.getItem('auth_hash');
-    if (typeof lookup == 'string') {
-        let chunks = lookup.split(':');
-        if (chunks.length == 2) {
-            let chunk_hash = chunks[0];
-            let chunk_expiry = +chunks[1];
-            if (chunk_hash == hash && Date.now() < chunk_expiry) return true;
-        }
-    }
-
-    return false;
-}
-
-function connect_with_spotify() {
-    let hash = get_auth_hash(60);
-    let oauth_url = `https://accounts.spotify.com/authorize?client_id=${spotify_client_id}&response_type=token&redirect_uri=${encodeURIComponent(
-        location.origin + location.pathname
-    )}&state=${hash}&scope=${encodeURIComponent(
-        'playlist-modify-public playlist-modify-private playlist-read-private playlist-read-collaborative user-modify-playback-state user-library-read user-read-playback-state'
-    )}`;
-
-    $('#connect_button').text('Redirecting').addClass('disabled');
-    location.href = oauth_url;
-}
-
-function application_loader(visible, message) {
-    let loader = $('#loader_container');
-    let message_tag = $('#loader_message');
-    let is_visible = loader.css('display') !== 'none';
-
-    if (typeof message == 'string') message_tag.text(message);
-
-    if (visible && !is_visible) {
-        loader.show();
-    } else if (!visible && is_visible) {
-        loader.hide();
-    }
-}
-
-let spotify_profile = {
-    id: '',
-    devices: [],
-    playlists: [],
-    playlists_by_key: {},
-    playlist_songs: {},
-    temporary: {
-        name: 'Temporary True Shuffle',
-        playlist: null,
-    },
-};
-
+/**
+ * Begins loading the application with the Spotify user access token.
+ */
 async function load_application() {
-    let token = get_access_token();
+    // Hide the authentication UI & Display the loading UI
+    log('APPLICATION', 'Loading application...');
+    const loading_message = document.getElementById('loader_message');
+    document.getElementById('loader_container').setAttribute('style', '');
+    document.getElementById('auth_section').setAttribute('style', 'display: none;');
 
-    // Retrieve user's spotify active devices for playback
-    application_loader(true, 'Retrieving Your Spotify Devices...');
-    spotify_profile.devices = await fetch_devices(token);
-
-    // Retrieve user's spotify playlists for choice of music
-    application_loader(true, 'Retrieving Your Spotify Playlists...');
-    let { userId, playlists } = await fetch_all_playlists(token);
-    spotify_profile.id = userId;
-
-    // Sort user's spotify playlists from most to least tracks
-    spotify_profile.playlists = playlists.sort(
-        (a, b) => b.tracks.total - a.tracks.total
-    );
-
-    // Store playlists by key:value where key is playlist id for faster access
-    spotify_profile.playlists.forEach((playlist) => {
-        spotify_profile.playlists_by_key[playlist.id] = playlist;
-        if (playlist.name === spotify_profile.temporary.name)
-            spotify_profile.temporary.playlist = playlist;
-    });
-
-    // Check if a valid device is available before enabling application
-    if (spotify_profile.devices.length == 0) {
-        $('#application_message')
-            .html(
-                `Please refresh the page when you have an active device with the Spotify application open. If you still do not see your device, you can play/pause any random song in your spotify application and then refresh this page.`
-            )
-            .show();
-
-        $('#play_button')
-            .text('No Devices Available')
-            .addClass('disabled')
-            .prop('disabled', true);
-
-        $('#application_section').show();
-        return application_loader(false, '');
+    // Initialize the Spotify API instance
+    try {
+        loading_message.innerText = 'Retrieving Your Spotify Profile';
+        SPOTIFY_API = await SpotifyAPI(auth_get_access_token());
+    } catch (error) {
+        log('ERROR', 'Failed to retrieve Spotify profile.');
+        loading_message.innerText = 'Failed to retrieve Spotify profile. Refresh the page to try again.';
+        return console.log(error);
     }
 
-    // Update UI with playlist choices
-    let playlists_dom = [];
-    spotify_profile.playlists.forEach((playlist) =>
-        playlists_dom.push(
-            `<option value="${playlist.id}">${playlist.name} - ${playlist.tracks.total} Songs</option>`
-        )
-    );
-    $('#choose_playlist').html(playlists_dom.join('\n'));
+    // Fetch the user's devices from Spotify
+    try {
+        loading_message.innerText = 'Retrieving Your Spotify Devices';
+        const devices = await SPOTIFY_API.get_devices();
 
-    // Update UI with device choices for playback
-    let devices_dom = [];
-    spotify_profile.devices.forEach((device) =>
-        devices_dom.push(`<option value="${device.id}">${device.name}</option>`)
-    );
-    $('#choose_device').html(devices_dom.join('\n'));
+        // If the user has no devices, display an error message
+        const identifiers = Object.keys(devices);
+        if (identifiers.length === 0) throw 'No Available Devices Found. Please Open Spotify On Your Device(s).';
 
-    // Disable UI loader and show application UI
-    application_loader(false);
-    $('#application_section').show();
+        // Render the devices in the UI selector
+        document.getElementById('choose_device').innerHTML = identifiers
+            .map((id) => {
+                const device = devices[id];
+                return `<option value="${device.id}">${device.name}</option>`;
+            })
+            .join('\n');
+    } catch (error) {
+        log('ERROR', 'Failed to retrieve Spotify devices.');
+        loading_message.innerText =
+            typeof error == 'string' ? error : 'Failed to retrieve Spotify devices. Refresh the page to try again.';
+        return console.log(error);
+    }
+
+    // Fetch the user's playlists from Spotify
+    try {
+        loading_message.innerText = 'Retrieving Your Spotify Playlists';
+        const playlists = await SPOTIFY_API.get_playlists();
+
+        // If the user has no playlists, display an error message
+        const identifiers = Object.keys(playlists);
+        if (playlists.length === 0) throw 'No Playlists Found. Please Create Or Like A Playlist On Spotify.';
+
+        // Render the devices in the UI selector
+        document.getElementById('choose_playlist').innerHTML = identifiers
+            .sort((a, b) => {
+                // Sort the playlists by decreasing number of tracks
+                return playlists[b].tracks.total - playlists[a].tracks.total;
+            })
+            .map((id) => {
+                const playlist = playlists[id];
+                return `<option value="${playlist.id}">${
+                    !playlist.owner.me ? `[${playlist.owner.display_name}] ` : ''
+                }${clamp_string(playlist.name, 40)} - ${playlist.tracks.total} Songs</option>`;
+            })
+            .join('\n');
+    } catch (error) {
+        log('ERROR', 'Failed to retrieve Spotify playlists.');
+        loading_message.innerText = 'Failed to retrieve Spotify playlists. Refresh the page to try again.';
+        return console.log(error);
+    }
+
+    // Hide the loading UI & Display the application UI
+    document.getElementById('loader_container').setAttribute('style', 'display: none;');
+    document.getElementById('application_section').setAttribute('style', '');
 }
 
 window.addEventListener('load', () => {
     // Ensure localStorage is available else browser is unsupported
-    if (!has_local_storage())
-        return $('#connect_button')
-            .text('Unsupported Browser')
-            .addClass('disabled');
+    log('STARTUP', 'Checking for local storage support...');
+    if (!local_storage_supported()) return ui_render_connect_button('Unsupported Browser', false);
 
     // Attempt to parse hash parameters from spotify for oauth callback
-    handle_auth_callback();
+    log('STARTUP', 'Parsing authentication connection parameters from Spotify...');
+    auth_parse_connection_parameters();
 
-    // Show application flow if a valid access token exists
-    if (typeof get_access_token(false) == 'string') {
-        $('#auth_section').hide();
-        return load_application();
+    // Determine if a valid access token is available and load application
+    if (auth_get_access_token()) return load_application();
+
+    // If the user has recently connected their account with the application, automatically reconnect with Spotify
+    if (auth_has_recently_connected()) {
+        log('STARTUP', 'User has recently connected their account with the application, redirecting to reconnect...');
+        auth_connect_spotify();
     }
-
-    // Check and redirect user to oauth if they are returning
-    let is_recurring_user = localStorage.getItem('returning_user') === 'true';
-    if (is_recurring_user) connect_with_spotify();
 });
