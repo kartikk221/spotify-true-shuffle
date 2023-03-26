@@ -1,7 +1,7 @@
 let SPOTIFY_API;
 let SHUFFLE_MAX_BATCH_SAMPLE_SIZE = 50;
-let TEMPORARY_SHUFFLED_PLAYLIST_NAME = 'True Shuffle Results';
-let TEMPORARY_SHUFFLED_PLAYLIST_DESCRIPTION = `An Automatically Generated Playlist By True Shuffle from ${location.origin}`;
+const TEMPORARY_SHUFFLED_PLAYLIST_NAME = 'True Shuffle Playlist';
+const TEMPORARY_SHUFFLED_PLAYLIST_DESCRIPTION = `An Automatically Generated Playlist By True Shuffle from ${location.origin}`;
 
 /**
  * Begins the process of shuffling and playing music based on UI selected playlist/device.
@@ -134,6 +134,15 @@ async function load_application() {
 
         // Render the devices in the UI selector
         document.getElementById('choose_device').innerHTML = identifiers
+            .sort((a, b) => {
+                const a_active_score = devices[a].is_active ? 1_000_000 : 0;
+                const a_volume_score = devices[a].volume_percent;
+                const b_active_score = devices[b].is_active ? 1_000_000 : 0;
+                const b_volume_score = devices[b].volume_percent;
+
+                // Sort by active device first, then by volume
+                return b_active_score + b_volume_score - (a_active_score + a_volume_score);
+            })
             .map((id) => {
                 const device = devices[id];
                 return `<option value="${device.id}">${device.name}</option>`;
@@ -142,7 +151,9 @@ async function load_application() {
     } catch (error) {
         log('ERROR', 'Failed to retrieve Spotify devices.');
         loading_message.innerText =
-            typeof error == 'string' ? error : 'Failed to retrieve Spotify devices. Refresh the page to try again.';
+            typeof error == 'string'
+                ? error
+                : 'Failed to retrieve any active Spotify devices for playback. Refresh the page to try again.';
         return console.log(error);
     }
 
@@ -158,8 +169,14 @@ async function load_application() {
         // Render the devices in the UI selector
         document.getElementById('choose_playlist').innerHTML = identifiers
             .sort((a, b) => {
+                const a_total_tracks = playlists[a].tracks.total;
+                const a_owned_by_me = playlists[a].owner.me ? 1_000_000 : 0;
+                const b_total_tracks = playlists[b].tracks.total;
+                const b_owned_by_me = playlists[b].owner.me ? 1_000_000 : 0;
+
                 // Sort the playlists by decreasing number of tracks
-                return playlists[b].tracks.total - playlists[a].tracks.total;
+                // Sort playlists owned by the user higher than other playlists
+                return b_total_tracks + b_owned_by_me - (a_total_tracks + a_owned_by_me);
             })
             .map((id) => {
                 const playlist = playlists[id];
@@ -175,8 +192,9 @@ async function load_application() {
     }
 
     // Hide the loading UI & Display the application UI
-    document.getElementById('loader_container').setAttribute('style', 'display: none;');
+    document.querySelector('.container').classList.add('authenticated');
     document.getElementById('application_section').setAttribute('style', '');
+    document.getElementById('loader_container').setAttribute('style', 'display: none;');
 }
 
 window.addEventListener('load', () => {

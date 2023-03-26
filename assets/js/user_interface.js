@@ -66,6 +66,7 @@ function ui_render_queued_songs(songs) {
                             <br />
                             <strong class="song-subtitle">${artists.join(', ')} - Released On ${released_on}</strong>
                         </p>
+                        <div class="song-action-play"></div>
                     </div>
                 </div>`;
         })

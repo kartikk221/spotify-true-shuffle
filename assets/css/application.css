@@ -17,10 +17,18 @@ body {
     padding: 3rem;
 }
 
+.spotify-logo {
+    width: 100%;
+    max-width: 250px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .landing-title {
     text-align: center;
     font-family: 'Poppins';
     font-weight: 600;
+    font-size: 2.5rem;
 }
 
 .landing-message {
@@ -32,14 +40,14 @@ body {
 .auth-button {
     width: 100%;
     border-radius: 10px;
-    background: black;
-    color: white;
-    border: 2px solid white;
+    background: white;
+    color: black;
+    border: 2px solid black;
     font-family: 'Poppins';
     font-weight: 600;
     padding: 20px;
     margin-top: 1rem;
-    max-width: 410px;
+    width: 100%;
     margin: auto;
     margin-top: 15px;
     font-size: 1.2rem;
@@ -48,27 +56,26 @@ body {
 }
 
 .auth-button:hover {
-    letter-spacing: 0.5px;
-    background: white;
-    color: black;
+    letter-spacing: 1px;
 }
 
 .auth-button.disabled {
     opacity: 0.3;
-    background: white!important;
-    color: black!important;
-    letter-spacing: 0px!important;
+    background: white !important;
+    color: black !important;
+    letter-spacing: 0px !important;
     user-select: none;
 }
 
 .page-select {
     display: block;
     padding: 1rem;
-    background: black;
+    background-color: black;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23FFFFFF' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
     border: 2px solid white;
     border-radius: 10px;
     color: white;
-    max-width: 300px;
+    width: 100%;
     margin: auto;
     outline: none;
 }
@@ -76,7 +83,7 @@ body {
 .application-button {
     display: block;
     margin: auto;
-    max-width: 300px;
+    width: 100%;
     font-size: 15px;
     margin-top: 15px;
     padding: 15px;
@@ -90,6 +97,25 @@ body {
     background: white;
     border-radius: 15px;
     padding: 10px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.song-action-play {
+    float: left;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='%23000000' d='M3 18.5v-17l14 8.5-14 8.5z' rx='2' ry='2' /%3e%3c/svg%3e");
+    width: 1.5em;
+    height: 1.5em;
+    transition: all .3s;
+    cursor: pointer;
+    transform: scale(0.3);
+    opacity: 0;
+}
+
+.song-element:hover .song-action-play {
+    transform: scale(1);
+    opacity: 1;
 }
 
 .song-image {
@@ -100,15 +126,31 @@ body {
     box-shadow: 2px 2px 5px 3px rgba(0, 0, 0, 0.15);
 }
 
+.label {
+    color: white;
+    font-size: 1.2rem;
+    font-family: 'Poppins';
+    font-weight: 600
+}
+
 .song-title {
     color: black;
     font-size: 1.3rem;
     float: left;
-    margin-left: 20px;
+    margin-left: 1em;
     font-family: 'Poppins';
     font-weight: 600;
     margin-bottom: 0px;
-    max-width: 88%;
+    width: 85%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: all .4s;
+    letter-spacing: 0px;
+}
+
+.song-element:hover .song-title {
+    letter-spacing: 0.5px;
 }
 
 .song-subtitle {
@@ -149,23 +191,44 @@ body {
     body {
         padding: 15px;
     }
+
     .auth-container {
         padding: 3rem;
         padding-left: 0.5rem;
         padding-right: 0.5rem;
     }
+
     .song-title {
         font-size: 0.9rem;
         max-width: 75%;
     }
+
     .song-image {
         width: 45px;
         height: 45px;
     }
+
     .song-subtitle {
         font-size: 0.6rem;
     }
+
     .github-icon {
         display: none;
+    }
+
+    .container .spotify-logo {
+        width: 50% !important;
+    }
+
+    .auth-button {
+        font-size: 1rem;
+    }
+
+    .landing-title {
+        font-size: 1.8rem;
+    }
+
+    .label {
+        font-size: 1rem;
     }
 }
