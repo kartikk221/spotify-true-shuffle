@@ -1,11 +1,12 @@
-let SPOTIFY_API;
-let RECENT_SPOTIFY_PLAYBACK_DEVICE_ID;
-let SHUFFLE_MAX_BATCH_SAMPLE_SIZE = 50;
-let RECENT_SPOTIFY_SHUFFLED_TRACKS = [];
+let SPOTIFY_API; // Globally stores the Spotify API instance
+let SPOTIFY_USER_IS_PREMIUM; // Caches whether the Spotify user is a Premium user or not
+let SHUFFLE_MAX_BATCH_SAMPLE_SIZE = 50; // The sample size for batch shuffling of tracks
+let RECENT_SPOTIFY_PLAYBACK_DEVICE_ID; // Caches the device id of the Spotify player that most recently played shuffled tracks
+let RECENT_SPOTIFY_SHUFFLED_TRACKS = []; // Caches the most recently shuffled tracks from Spotify
 
-let TEMPORARY_SHUFFLED_PLAYLIST;
-const TEMPORARY_SHUFFLED_PLAYLIST_NAME = 'True Shuffle Playlist';
-const TEMPORARY_SHUFFLED_PLAYLIST_DESCRIPTION = `An Automatically Generated Playlist By True Shuffle from ${location.origin}`;
+let TEMPORARY_SHUFFLED_PLAYLIST; // Caches the temporary shuffled playlist object to store free user shuffled tracks
+const TEMPORARY_SHUFFLED_PLAYLIST_NAME = 'True Shuffle Playlist'; // Default name for the temporary shuffled playlist
+const TEMPORARY_SHUFFLED_PLAYLIST_DESCRIPTION = `An Automatically Generated Playlist By True Shuffle from ${location.origin}`; // Default description for the temporary shuffled playlist
 
 /**
  * Begins the process of shuffling and playing music based on UI selected playlist/device.
@@ -45,15 +46,20 @@ async function shuffle_and_play() {
     RECENT_SPOTIFY_SHUFFLED_TRACKS = results;
 
     // Safely determine if the user is a Premium user by disabling shuffle
-    let is_premium;
-    try {
-        ui_render_play_button('Preparing Player...', false);
-        is_premium = await SPOTIFY_API.set_playback_shuffle(device_id, false);
-    } catch (error) {
-        log('ERROR', 'Failed to set playback shuffle to disabled.');
-        alert('Failed to disable playback shuffle in Spotify player.');
-        return console.log(error);
+    let is_premium = SPOTIFY_USER_IS_PREMIUM;
+    if (is_premium === undefined) {
+        try {
+            ui_render_play_button('Preparing Player...', false);
+            is_premium = await SPOTIFY_API.set_playback_shuffle(device_id, false);
+        } catch (error) {
+            log('ERROR', 'Failed to set playback shuffle to disabled.');
+            alert('Failed to disable playback shuffle in Spotify player.');
+            return console.log(error);
+        }
     }
+
+    // Cache the user's premium status for later use
+    SPOTIFY_USER_IS_PREMIUM = is_premium;
 
     // Spotify Premium User: Start playback with our shuffled results song uris
     if (is_premium) {
@@ -164,6 +170,9 @@ function bind_playables_listeners() {
                 alert('Failed to play tracks from the selected track in selected device Spotify player.');
                 return console.log(error);
             }
+
+            // Enable the UI button to allow the user to reshuffle and play music
+            ui_render_play_button('Reshuffle & Play', true);
         };
         playable.addEventListener('click', listener);
 
