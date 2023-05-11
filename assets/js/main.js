@@ -64,7 +64,8 @@ async function shuffle_and_play() {
     } else {
         // Spotify Free User: Create a temporary playlist to store the shuffled results song uris
         const playlists = await SPOTIFY_API.get_playlists();
-        let temporary = Object.keys(playlists).find((id) => playlists[id].name === TEMPORARY_SHUFFLED_PLAYLIST_NAME);
+        let temporary =
+            playlists[Object.keys(playlists).find((id) => playlists[id].name === TEMPORARY_SHUFFLED_PLAYLIST_NAME)];
 
         // Create the temporary shuffle results playlist if it does not exist yet
         if (!temporary)
