@@ -1,7 +1,9 @@
 let SPOTIFY_API;
 let RECENT_SPOTIFY_PLAYBACK_DEVICE_ID;
-let RECENT_SPOTIFY_SHUFFLED_TRACKS = [];
 let SHUFFLE_MAX_BATCH_SAMPLE_SIZE = 50;
+let RECENT_SPOTIFY_SHUFFLED_TRACKS = [];
+
+let TEMPORARY_SHUFFLED_PLAYLIST;
 const TEMPORARY_SHUFFLED_PLAYLIST_NAME = 'True Shuffle Playlist';
 const TEMPORARY_SHUFFLED_PLAYLIST_DESCRIPTION = `An Automatically Generated Playlist By True Shuffle from ${location.origin}`;
 
@@ -73,6 +75,7 @@ async function shuffle_and_play() {
         // Spotify Free User: Create a temporary playlist to store the shuffled results song uris
         const playlists = await SPOTIFY_API.get_playlists();
         let temporary =
+            TEMPORARY_SHUFFLED_PLAYLIST ||
             playlists[Object.keys(playlists).find((id) => playlists[id].name === TEMPORARY_SHUFFLED_PLAYLIST_NAME)];
 
         // Create the temporary shuffle results playlist if it does not exist yet
@@ -88,6 +91,9 @@ async function shuffle_and_play() {
                 alert('Failed to create temporary shuffle results playlist.');
                 return console.log(error);
             }
+
+        // Cache the temporary playlist for later use
+        TEMPORARY_SHUFFLED_PLAYLIST = temporary;
 
         // Set the shuffled tracks into the temporary playlist
         try {
