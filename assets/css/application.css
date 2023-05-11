@@ -100,6 +100,11 @@ body {
     display: flex;
     align-items: center;
     cursor: pointer;
+    transition: opacity 0.4s ease;
+}
+
+.song-element.muted {
+    opacity: 0.3;
 }
 
 .song-action-play {
@@ -113,7 +118,7 @@ body {
     opacity: 0;
 }
 
-.song-element:hover .song-action-play {
+.song-element.playable:hover .song-action-play {
     transform: scale(1);
     opacity: 1;
 }
@@ -149,7 +154,7 @@ body {
     letter-spacing: 0px;
 }
 
-.song-element:hover .song-title {
+.song-element.playable:hover .song-title {
     letter-spacing: 0.5px;
 }
 

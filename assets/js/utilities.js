@@ -95,6 +95,7 @@ function clamp_string(string, length, trail = '...') {
  * Performs a per item swap shuffle powered by the Math.random() generator.
  *
  * @param {Array} array
+ * @returns {Array}
  */
 function swap_shuffle(array) {
     for (let i = 0; i < array.length; i++) {
@@ -106,6 +107,7 @@ function swap_shuffle(array) {
         array[rand] = array[i];
         array[i] = temp;
     }
+    return array;
 }
 
 /**

@@ -51,15 +51,15 @@ const MONTH_NAMES = [
     'December',
 ];
 
-function ui_render_queued_songs(songs) {
+function ui_render_queued_songs(songs, is_premium) {
     // Render the queued tracks into the results container
     document.getElementById('shuffle_results').innerHTML = songs
-        .map(({ index, name, artists, image, release_date }) => {
+        .map(({ id, index, name, artists, image, release_date }) => {
             const [year, month, day] = release_date.split('-');
             const released_on = `${MONTH_NAMES[month - 1]} ${day}, ${year}`;
             return `
                 <div class="row mt-3">
-                    <div class="song-element">
+                    <div track-id="${id}" class="song-element ${is_premium ? 'playable' : ''}">
                         ${image ? `<img class="song-image" src="${image}" />` : ''}
                         <p class="song-title">
                             #${index + 1} - ${name}

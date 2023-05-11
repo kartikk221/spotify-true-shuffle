@@ -1,4 +1,6 @@
 let SPOTIFY_API;
+let RECENT_SPOTIFY_PLAYBACK_DEVICE_ID;
+let RECENT_SPOTIFY_SHUFFLED_TRACKS = [];
 let SHUFFLE_MAX_BATCH_SAMPLE_SIZE = 50;
 const TEMPORARY_SHUFFLED_PLAYLIST_NAME = 'True Shuffle Playlist';
 const TEMPORARY_SHUFFLED_PLAYLIST_DESCRIPTION = `An Automatically Generated Playlist By True Shuffle from ${location.origin}`;
@@ -37,6 +39,9 @@ async function shuffle_and_play() {
     const results = get_spread_batch(shuffled, 100, size);
     const uris = results.map(({ uri }) => uri);
 
+    // Store the shuffled results in a global variable for later use
+    RECENT_SPOTIFY_SHUFFLED_TRACKS = results;
+
     // Safely determine if the user is a Premium user by disabling shuffle
     let is_premium;
     try {
@@ -56,6 +61,9 @@ async function shuffle_and_play() {
             await SPOTIFY_API.play_tracks(device_id, {
                 uris,
             });
+
+            // Store the device id for later use
+            RECENT_SPOTIFY_PLAYBACK_DEVICE_ID = device_id;
         } catch (error) {
             log('ERROR', 'Failed to play shuffled tracks in selected device Spotify player.');
             alert('Failed to play shuffled tracks in selected device Spotify player.');
@@ -98,10 +106,67 @@ async function shuffle_and_play() {
     }
 
     // Render the queued tracks in the UI
-    ui_render_queued_songs(results);
+    ui_render_queued_songs(results, is_premium);
+
+    // Bind the listeners to the UI elements that are responsible for playing music from a certain playable track
+    if (is_premium) bind_playables_listeners();
 
     // Enable the UI button to allow the user to reshuffle and play music
     ui_render_play_button('Reshuffle & Play', true);
+}
+
+// Tracks the listeners that are bound to the UI elements that are responsible for playing music from a certain playable track
+const PLAYABLE_LISTENERS = new Map();
+
+/**
+ * Binds the listeners to the UI elements that are responsible for playing music from a certain playable track.
+ */
+function bind_playables_listeners() {
+    // Purge old listeners from previous bound playable elements
+    for (const { playable, listener } of PLAYABLE_LISTENERS.values()) {
+        playable.removeEventListener('click', listener);
+    }
+    PLAYABLE_LISTENERS.clear();
+
+    // Retrieve all the playable elements
+    const playables = document.querySelectorAll('.playable');
+    for (let i = 0; i < playables.length; i++) {
+        // Bind the listener to the playable element
+        const playable = playables[i];
+        const listener = async () => {
+            // Add the muted class to all tracks up to the selected track and remove the muted class from all tracks after the selected track
+            for (let j = 0; j < playables.length; j++) {
+                const _playable = playables[j];
+                if (j < i) {
+                    _playable.classList.add('muted');
+                } else {
+                    _playable.classList.remove('muted');
+                }
+            }
+
+            // Play music from the given track
+            try {
+                // Play the shuffled tracks in the selected device player
+                const sliced = RECENT_SPOTIFY_SHUFFLED_TRACKS.slice(i);
+                const uris = sliced.map(({ uri }) => uri);
+                ui_render_play_button('Starting Playback...', false);
+                await SPOTIFY_API.play_tracks(RECENT_SPOTIFY_PLAYBACK_DEVICE_ID, {
+                    uris,
+                });
+            } catch (error) {
+                log('ERROR', 'Failed to play tracks from the selected track in selected device Spotify player.');
+                alert('Failed to play tracks from the selected track in selected device Spotify player.');
+                return console.log(error);
+            }
+        };
+        playable.addEventListener('click', listener);
+
+        // Store the listener in the PLAYABLE_LISTENERS map
+        PLAYABLE_LISTENERS.set(i, {
+            playable,
+            listener,
+        });
+    }
 }
 
 /**
