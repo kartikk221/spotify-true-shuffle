@@ -3,6 +3,7 @@ async function SpotifyAPI(token) {
     const instance = {
         _with_pagination: null,
         _api_request: null,
+        _parse_track: null,
         _cache: {
             tracks: {},
             profile: null,
@@ -11,12 +12,14 @@ async function SpotifyAPI(token) {
         },
         _constants: {
             API_BASE: 'https://api.spotify.com/v1',
+            LIKED_SONGS_PLAYLIST_ID: 'user_saved_tracks',
             TOKEN: token,
         },
         play_tracks: null,
         get_profile: null,
         get_devices: null,
         get_playlists: null,
+        get_liked_tracks: null,
         create_playlist: null,
         get_playlist_tracks: null,
         set_playback_shuffle: null,
@@ -56,7 +59,7 @@ async function SpotifyAPI(token) {
     };
 
     // Define the method for performing pagination based operations
-    instance._with_pagination = async ({ request, limit = 50, delay = 150, cursor = 0 }) => {
+    instance._with_pagination = async ({ request, limit = 50, delay = 0, cursor = 0 }) => {
         // Retrieve the initial batch of items
         const { items, next } = await request({ limit, offset: cursor });
 
@@ -80,13 +83,27 @@ async function SpotifyAPI(token) {
         return items;
     };
 
+    // Define a method for parsing a track object
+    instance._parse_track = ({ track }, index) => ({
+        index,
+        id: track?.id,
+        uri: track?.uri,
+        name: track?.name,
+        local: track?.uri?.startsWith('spotify:local:'),
+        image: track?.album?.images?.[0]?.url,
+        artists: track?.artists?.map?.(({ name }) => name),
+        release_date: track?.album?.release_date,
+    });
+
     // Define the method for retrieving the user's profile
     instance.get_profile = async (options = {}) => {
         // Resolve from cache if specified
         const { cache = true } = options;
+
+        // Resolve from cache if specified and available
         if (cache && instance._cache.profile) return instance._cache.profile;
 
-        // Retrieve the user's profile from the cache if specified
+        // Retrieve the user's profile from the Spotify API
         instance._cache.profile = await instance._api_request({
             endpoint: '/me',
         });
@@ -98,9 +115,11 @@ async function SpotifyAPI(token) {
     instance.get_devices = async (options = {}) => {
         // Resolve from cache if specified
         const { cache = true } = options;
+
+        // Resolve from cache if specified and available
         if (cache && instance._cache.devices) return instance._cache.devices;
 
-        // Retrieve the user's profile from the cache if specified
+        // Retrieve the user's devices from the Spotify API
         const { devices } = await instance._api_request({
             endpoint: '/me/player/devices',
         });
@@ -114,19 +133,19 @@ async function SpotifyAPI(token) {
     // Define the method for retrieving the user's playlists
     instance.get_playlists = async (options = {}) => {
         // Destructure the required parameters from the options object
-        const { cache = true, limit = 50, delay = 150, offset = 0 } = options;
+        const { cache = true, limit = 50, delay = 0, offset = 0 } = options;
 
         // Resolve from cache if specified
         if (cache && instance._cache.playlists) return instance._cache.playlists;
 
-        // Retrieve the user's profile from the cache if specified
+        // Retrieve the user's playlists from the cache if specified
         const playlists = await instance._with_pagination({
             limit,
             delay,
             cursor: offset,
-            request: (props) =>
+            request: ({ limit, offset }) =>
                 instance._api_request({
-                    endpoint: `/me/playlists?limit=${props.limit}&offset=${props.offset}`,
+                    endpoint: `/me/playlists?limit=${limit}&offset=${offset}`,
                 }),
         });
 
@@ -140,10 +159,57 @@ async function SpotifyAPI(token) {
         return instance._cache.playlists;
     };
 
+    // Define the method for retrieving the user's liked tracks
+    instance.get_liked_tracks = async (options = {}) => {
+        // Desctructure the required parameters from the options object
+        const { LIKED_SONGS_PLAYLIST_ID } = instance._constants;
+        const { cache = true, limit = 50, delay = 0, offset = 0, count = false, on_progress } = options;
+
+        // Retrieve the user's liked tracks from Spotify API
+        if (count) {
+            // Only retrieve the first page of liked tracks
+            const { total } = await instance._api_request({
+                endpoint: '/me/tracks?limit=1&offset=0', // Only retrieve the first page with 1 track
+            });
+
+            // Return the total number of liked tracks
+            return total;
+        } else {
+            // Resolve from cache if specified
+            if (cache && instance._cache.tracks[LIKED_SONGS_PLAYLIST_ID])
+                return instance._cache.tracks[LIKED_SONGS_PLAYLIST_ID];
+
+            // Retrieve the liked tracks with pagination
+            const tracks = await instance._with_pagination({
+                limit,
+                delay,
+                _offset: offset,
+                request: async ({ limit, offset }) => {
+                    // Retrieve the tracks for this props request
+                    const tracks = await instance._api_request({
+                        endpoint: `/me/tracks?limit=${limit}&offset=${offset}`,
+                    });
+
+                    // Invoke the progress callback if one is specified for updating the progress
+                    if (typeof on_progress == 'function') on_progress(offset + limit, tracks.total);
+
+                    // Return the tracks
+                    return tracks;
+                },
+            });
+
+            // Process and sanitize the tracks and cache the playlist tracks
+            instance._cache.tracks[LIKED_SONGS_PLAYLIST_ID] = tracks.map(instance._parse_track);
+
+            // Return the playlist tracks
+            return instance._cache.tracks[LIKED_SONGS_PLAYLIST_ID];
+        }
+    };
+
     // Define the method for retrieving playlist tracks
     instance.get_playlist_tracks = async (playlist_id, options = {}) => {
         // Destructure the required parameters from the options object
-        const { cache = true, limit = 50, delay = 150, offset = 0, on_progress } = options;
+        const { cache = true, limit = 50, delay = 0, offset = 0, on_progress } = options;
 
         // Check and resolve from memory cache if available
         if (cache && instance._cache.tracks[playlist_id]) return instance._cache.tracks[playlist_id];
@@ -154,31 +220,24 @@ async function SpotifyAPI(token) {
             limit,
             delay,
             _offset: offset,
-            request: async (props) => {
+            request: async ({ limit, offset }) => {
                 // Retrieve the tracks for this props request
                 const tracks = await instance._api_request({
-                    endpoint: `/playlists/${playlist.id}/tracks?limit=${props.limit}&offset=${props.offset}`,
+                    endpoint: `/playlists/${playlist.id}/tracks?limit=${limit}&offset=${offset}`,
                 });
 
                 // Invoke the progress callback if one is specified
-                if (typeof on_progress == 'function') on_progress(props.offset + props.limit, playlist.tracks.total);
+                if (typeof on_progress == 'function') on_progress(offset + limit, playlist.tracks.total);
 
+                // Return the tracks
                 return tracks;
             },
         });
 
         // Process and sanitize the tracks and cache the playlist tracks
-        instance._cache.tracks[playlist_id] = tracks.map(({ track }, index) => ({
-            index,
-            id: track?.id,
-            uri: track?.uri,
-            name: track?.name,
-            local: track?.uri?.startsWith('spotify:local:'),
-            image: track?.album?.images?.[0]?.url,
-            artists: track?.artists?.map?.(({ name }) => name),
-            release_date: track?.album?.release_date,
-        }));
+        instance._cache.tracks[playlist_id] = tracks.map(instance._parse_track);
 
+        // Return the playlist tracks
         return instance._cache.tracks[playlist_id];
     };
 

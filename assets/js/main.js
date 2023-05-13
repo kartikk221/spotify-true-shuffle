@@ -20,15 +20,32 @@ async function shuffle_and_play() {
     let songs;
     try {
         ui_render_play_button('Retrieving Songs...', false);
-        songs = await SPOTIFY_API.get_playlist_tracks(playlist_id, {
-            on_progress: (progress, total) => {
-                // Update the UI to display progress of network fetches
-                ui_render_play_button(`Retrieving Songs... [${progress} / ${total}]`, false);
-            },
-        });
+        if (playlist_id === SPOTIFY_API._constants.LIKED_SONGS_PLAYLIST_ID) {
+            songs = await SPOTIFY_API.get_liked_tracks({
+                on_progress: (progress, total) => {
+                    // Update the UI to display progress of network fetches
+                    ui_render_play_button(`Retrieving Songs... [${progress} / ${total}]`, false);
+                },
+            });
+        } else {
+            songs = await SPOTIFY_API.get_playlist_tracks(playlist_id, {
+                on_progress: (progress, total) => {
+                    // Update the UI to display progress of network fetches
+                    ui_render_play_button(`Retrieving Songs... [${progress} / ${total}]`, false);
+                },
+            });
+        }
 
         // Filter the retrieved songs to only include songs that are not local
         songs = songs.filter((song) => !song.local);
+
+        // If there no songs to shuffle, then alert the user and return
+        if (songs.length === 0) {
+            log('ERROR', 'No songs to shuffle.');
+            ui_render_play_button('Reshuffle & Play', true);
+            alert('No songs to shuffle. Please select a different playlist.');
+            return;
+        }
     } catch (error) {
         log('ERROR', 'Failed to retrieve Spotify profile.');
         alert('Failed to retrieve songs from Spotify. Refresh the page to try again.');
@@ -37,7 +54,7 @@ async function shuffle_and_play() {
 
     // Shuffle the songs array with a batch shuffle which batches with size up to 25 songs each batch
     ui_render_play_button('Shuffling Songs...', false);
-    const size = Math.max(SHUFFLE_MAX_BATCH_SAMPLE_SIZE, Math.round(songs.length / 10));
+    const size = Math.max(SHUFFLE_MAX_BATCH_SAMPLE_SIZE, Math.ceil(songs.length / 10));
     const shuffled = songs.length <= 10 ? swap_shuffle(songs) : batch_swap_shuffle(songs, size);
     const results = get_spread_batch(shuffled, 100, size);
     const uris = results.map(({ uri }) => uri);
@@ -61,7 +78,7 @@ async function shuffle_and_play() {
     // Cache the user's premium status for later use
     SPOTIFY_USER_IS_PREMIUM = is_premium;
 
-    // Spotify Premium User: Start playback with our shuffled results song uris
+    // Spotify Premium User Scenario: Start playback with our shuffled results song uris
     if (is_premium) {
         try {
             // Play the shuffled tracks in the selected device player
@@ -78,7 +95,7 @@ async function shuffle_and_play() {
             return console.log(error);
         }
     } else {
-        // Spotify Free User: Create a temporary playlist to store the shuffled results song uris
+        // Spotify Free User Scenario: Create a temporary playlist to store the shuffled results song uris
         const playlists = await SPOTIFY_API.get_playlists();
         let temporary =
             TEMPORARY_SHUFFLED_PLAYLIST ||
@@ -120,8 +137,14 @@ async function shuffle_and_play() {
     // Render the queued tracks in the UI
     ui_render_queued_songs(results, is_premium);
 
-    // Bind the listeners to the UI elements that are responsible for playing music from a certain playable track
-    if (is_premium) bind_playables_listeners();
+    // Ensure the user is a premium user to unlock certain advanced features
+    if (is_premium) {
+        // Bind the listeners to the UI elements that are responsible for playing music from a certain playable track
+        bind_playables_listeners();
+
+        // Display the song playback message
+        document.querySelector('#song-playback-message').setAttribute('style', 'display: block; text-align: center;');
+    }
 
     // Enable the UI button to allow the user to reshuffle and play music
     ui_render_play_button('Reshuffle & Play', true);
@@ -174,6 +197,8 @@ function bind_playables_listeners() {
             // Enable the UI button to allow the user to reshuffle and play music
             ui_render_play_button('Reshuffle & Play', true);
         };
+
+        // Bind the listener to the playable element
         playable.addEventListener('click', listener);
 
         // Store the listener in the PLAYABLE_LISTENERS map
@@ -195,9 +220,11 @@ async function load_application() {
     document.getElementById('auth_section').setAttribute('style', 'display: none;');
 
     // Initialize the Spotify API instance
+    let profile;
     try {
         loading_message.innerText = 'Retrieving Your Spotify Profile';
         SPOTIFY_API = await SpotifyAPI(auth_get_access_token());
+        profile = await SPOTIFY_API.get_profile(); // This should be cached in the SpotifyAPI instance already
     } catch (error) {
         log('ERROR', 'Failed to retrieve Spotify profile.');
         loading_message.innerText = 'Failed to retrieve Spotify profile. Refresh the page to try again.';
@@ -240,37 +267,92 @@ async function load_application() {
 
     // Fetch the user's playlists from Spotify
     try {
+        // Retrieve the user's playlists along with the total number of liked songs
         loading_message.innerText = 'Retrieving Your Spotify Playlists';
-        const playlists = await SPOTIFY_API.get_playlists();
+        const [playlists, total_liked_songs] = await Promise.all([
+            SPOTIFY_API.get_playlists(),
+            SPOTIFY_API.get_liked_tracks({ count: true }),
+        ]);
+
+        // Create a dummy playlist for the user's liked songs
+        playlists[SPOTIFY_API._constants.LIKED_SONGS_PLAYLIST_ID] = {
+            id: SPOTIFY_API._constants.LIKED_SONGS_PLAYLIST_ID,
+            type: 'playlist',
+            name: 'Your Music / Liked Songs',
+            description: 'The songs you liked on Spotify.',
+            snapshot_id: total_liked_songs.toString(), // Use the total number of liked songs as the snapshot ID as we don't have a real snapshot ID for the liked songs playlist
+            tracks: {
+                total: total_liked_songs,
+            },
+            owner: {
+                me: true,
+            },
+        };
 
         // If the user has no playlists, display an error message
         const identifiers = Object.keys(playlists);
-        if (playlists.length === 0) throw 'No Playlists Found. Please Create Or Like A Playlist On Spotify.';
+        if (identifiers.length === 0) throw 'No Playlists Found. Please Create Or Like A Playlist On Spotify.';
+
+        // Sort the playlist identifiers based on personalization factors
+        identifiers.sort((a, b) => {
+            const a_total_tracks = playlists[a].tracks.total;
+            const a_owned_by_me = playlists[a].owner.me ? 1_000_000 : 0;
+            const b_total_tracks = playlists[b].tracks.total;
+            const b_owned_by_me = playlists[b].owner.me ? 1_000_000 : 0;
+            const a_is_liked_songs = a === SPOTIFY_API._constants.LIKED_SONGS_PLAYLIST_ID ? 100_000_000 : 0;
+            const b_is_liked_songs = b === SPOTIFY_API._constants.LIKED_SONGS_PLAYLIST_ID ? 100_000_000 : 0;
+
+            // Sort the playlists by decreasing number of tracks
+            // Sort playlists owned by the user higher than other playlists
+            return (
+                b_total_tracks + b_owned_by_me + b_is_liked_songs - (a_total_tracks + a_owned_by_me + a_is_liked_songs)
+            );
+        });
+
+        // Insert empty spacers between the liked playlist, user's playlists, and followed playlists
+        for (let i = 0; i < identifiers.length; i++) {
+            // Ensure the current identifier is not a spacer
+            if (identifiers[i]) {
+                const current = playlists[identifiers[i]];
+                const next = playlists[identifiers[i + 1]];
+
+                // Insert a spacer if this is the liked songs playlist
+                if (current.id === SPOTIFY_API._constants.LIKED_SONGS_PLAYLIST_ID) identifiers.splice(i + 1, 0, '');
+
+                // Insert a spacer if this is a user playlist and the next playlist is not a user playlist
+                if (current.owner.me && (!next || !next.owner.me)) identifiers.splice(i + 1, 0, '');
+            }
+        }
+
+        // Render the playlist identifiers to HTML for the UI
+        const rendered = identifiers.map((id) => {
+            // If there is no ID, render an empty spacer
+            if (!id) return '<option value="spacer" disabled>    </option>';
+
+            // Render the playlist as an option in the UI selector
+            const playlist = playlists[id];
+            const playlist_songs = playlist.tracks.total;
+            const playlist_name = clamp_string(playlist.name || playlist.id || 'Unknown', 25);
+            const playlist_author_name = clamp_string(
+                playlist.owner.display_name || playlist.owner.id || 'Unknown',
+                25
+            );
+            const playlist_owned_by_me = playlist.owner.me === true;
+            return `<option value="${playlist.id}">${playlist_name} - ${playlist_songs} Songs ${
+                playlist_owned_by_me ? '(By You)' : `(By ${playlist_author_name})`
+            }</option>`;
+        });
 
         // Render the devices in the UI selector
-        document.getElementById('choose_playlist').innerHTML = identifiers
-            .sort((a, b) => {
-                const a_total_tracks = playlists[a].tracks.total;
-                const a_owned_by_me = playlists[a].owner.me ? 1_000_000 : 0;
-                const b_total_tracks = playlists[b].tracks.total;
-                const b_owned_by_me = playlists[b].owner.me ? 1_000_000 : 0;
-
-                // Sort the playlists by decreasing number of tracks
-                // Sort playlists owned by the user higher than other playlists
-                return b_total_tracks + b_owned_by_me - (a_total_tracks + a_owned_by_me);
-            })
-            .map((id) => {
-                const playlist = playlists[id];
-                return `<option value="${playlist.id}">${
-                    !playlist.owner.me ? `[${playlist.owner.display_name}] ` : ''
-                }${clamp_string(playlist.name, 40)} - ${playlist.tracks.total} Songs</option>`;
-            })
-            .join('\n');
+        document.getElementById('choose_playlist').innerHTML = rendered.join('\n');
     } catch (error) {
         log('ERROR', 'Failed to retrieve Spotify playlists.');
         loading_message.innerText = 'Failed to retrieve Spotify playlists. Refresh the page to try again.';
         return console.log(error);
     }
+
+    // Update the landing title with a more personalized message
+    document.querySelector('.landing-title').innerText = `Welcome, ${profile.display_name}!`;
 
     // Hide the loading UI & Display the application UI
     document.querySelector('.container').classList.add('authenticated');

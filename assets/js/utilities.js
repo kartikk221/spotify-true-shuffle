@@ -98,6 +98,10 @@ function clamp_string(string, length, trail = '...') {
  * @returns {Array}
  */
 function swap_shuffle(array) {
+    // Handle scenario for less than 2 items
+    if (array.length < 2) return array;
+
+    // Perform a swap shuffle on the provided array
     for (let i = 0; i < array.length; i++) {
         // Determine a random index with which we will swap current element
         const rand = random_number(0, array.length - 1);
@@ -107,6 +111,8 @@ function swap_shuffle(array) {
         array[rand] = array[i];
         array[i] = temp;
     }
+
+    // Return the shuffled array
     return array;
 }
 
@@ -146,7 +152,10 @@ function get_spread_batch(array, batch_size, sample_size) {
     if (Number.isNaN(batch_size) || batch_size < 1) throw new Error('Invalid batch_size provided');
 
     // Determine if a sample size automatically if one is not provided based on an array size of 100
-    sample_size = Math.max(1, sample_size || Math.round(array.length / 10));
+    sample_size = Math.max(1, sample_size || Math.ceil(array.length / 10));
+
+    // Handle scenario for less array items than batch size
+    if (array.length < batch_size) return array;
 
     // Generate a random of batch of items picked randomly based on sample size based random increments
     let batch = [];
