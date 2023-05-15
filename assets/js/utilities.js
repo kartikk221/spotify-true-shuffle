@@ -173,3 +173,78 @@ function get_spread_batch(array, batch_size, sample_size) {
 
     return batch;
 }
+
+// Javascript program to rearrange numbers in
+// an Array such that no two numbers are
+// adjacent
+ 
+// Function to rearrange numbers in array such
+// that no two adjacent numbers are same
+// This code is contributed by rutvik_56, edited by EpicGazel.
+function rearrangeAdjacent(arr)
+{
+     
+    // Store frequencies of all elements
+    // of the array
+    var mp = new Map();
+    var visited = new Map();
+     
+    for(var i = 0; i < arr.length; i++)
+    {
+        if(mp.has(arr[i].added_by.id))
+          mp.set(arr[i].added_by.id, mp.get(arr[i].added_by.id)+1)
+        else
+          mp.set(arr[i].added_by.id, 1)
+    }
+     
+    var pq = [];
+     
+    // Adding high freq elements
+    // in descending order
+    for(var i = 0; i < arr.length; i++)
+    {
+        var val = arr[i].added_by.id;
+         
+        if (mp.get(val) > 0 && visited[val] != 1)
+        {
+            pq.push([mp.get(val), val]);
+        }
+        visited[val] = 1;
+    }
+    pq.sort();
+    // 'result[]' that will store resultant value
+    var result = Array(arr.length).fill(0);
+     
+    // Work as the previous visited element
+    // initial previous element will be ( '-1' and
+    // it's frequency wiint also be '-1' )
+    var prev = [-1, -1];
+    var l = 0;
+     
+    // Traverse queue
+    while (pq.length != 0)
+    {
+         
+        // Pop top element from queue and add it
+        // to result
+        var k = pq[pq.length-1];
+        pq.pop();
+        result[l] = k[1];
+         
+        // If frequency of previous element is less
+        // than zero that means it is useless, we
+        // need not to push it
+        if (prev[0] > 0)
+        {
+            pq.push(prev);
+        }
+        pq.sort();
+        // Make current element as the previous
+        // decrease frequency by 'one'
+        k[0]--;
+        prev = k;
+        l++;
+    }
+     
+    return result;
+}
