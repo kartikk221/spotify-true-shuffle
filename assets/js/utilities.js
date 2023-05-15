@@ -191,11 +191,11 @@ function rearrangeAdjacent(arr)
      
     for(var i = 0; i < arr.length; i++)
     {
-		console.log(arr[i].added_by.id)
-        if(mp.has(arr[i].added_by.id))
-          mp.set(arr[i].added_by.id, mp.get(arr[i].added_by.id)+1)
+		console.log(arr[i].added_by_id)
+        if(mp.has(arr[i].added_by_id))
+          mp.set(arr[i].added_by_id, mp.get(arr[i].added_by_id)+1)
         else
-          mp.set(arr[i].added_by.id, 1)
+          mp.set(arr[i].added_by_id, 1)
     }
      
     var pq = [];
@@ -204,7 +204,7 @@ function rearrangeAdjacent(arr)
     // in descending order
     for(var i = 0; i < arr.length; i++)
     {
-        var val = arr[i].added_by.id;
+        var val = arr[i].added_by_id;
          
         if (mp.get(val) > 0 && visited[val] != 1)
         {
