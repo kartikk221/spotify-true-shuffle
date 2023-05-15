@@ -84,7 +84,7 @@ async function SpotifyAPI(token) {
     };
 
     // Define a method for parsing a track object
-    instance._parse_track = ({ track }, index) => ({
+    instance._parse_track = ({ track, added_by }, index) => ({
         index,
         id: track?.id,
         uri: track?.uri,
@@ -93,7 +93,7 @@ async function SpotifyAPI(token) {
         image: track?.album?.images?.[0]?.url,
         artists: track?.artists?.map?.(({ name }) => name),
         release_date: track?.album?.release_date,
-		added_by_id: track?.added_by?.id,
+		added_by_id: added_by?.id,
     });
 
     // Define the method for retrieving the user's profile
