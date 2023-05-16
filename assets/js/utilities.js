@@ -144,7 +144,7 @@ function batch_swap_shuffle(array, size) {
         const batch = array.slice(i * size, i * size + size);
         swap_shuffle(batch, prev_adder);
         batches.push(batch);
-		prev_adder = batch[batch.length - 1];
+		prev_adder = batch[batch.length - 1].added_by_id;
     }
 
     // Return the batches as a single array
