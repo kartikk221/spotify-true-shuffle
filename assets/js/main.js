@@ -3,6 +3,7 @@ let SPOTIFY_USER_IS_PREMIUM; // Caches whether the Spotify user is a Premium use
 let SHUFFLE_MAX_BATCH_SAMPLE_SIZE = 50; // The sample size for batch shuffling of tracks
 let RECENT_SPOTIFY_PLAYBACK_DEVICE_ID; // Caches the device id of the Spotify player that most recently played shuffled tracks
 let RECENT_SPOTIFY_SHUFFLED_TRACKS = []; // Caches the most recently shuffled tracks from Spotify
+const MAX_FINAL_PLAYLIST_SIZE = 300;
 
 let TEMPORARY_SHUFFLED_PLAYLIST; // Caches the temporary shuffled playlist object to store free user shuffled tracks
 const TEMPORARY_SHUFFLED_PLAYLIST_NAME = 'True Shuffle Playlist'; // Default name for the temporary shuffled playlist
@@ -56,7 +57,7 @@ async function shuffle_and_play() {
     ui_render_play_button('Shuffling Songs...', false);
     const size = Math.max(SHUFFLE_MAX_BATCH_SAMPLE_SIZE, Math.ceil(songs.length / 10));
     const shuffled = songs.length <= 10 ? swap_shuffle(songs) : batch_swap_shuffle(songs, size);
-    const results = get_spread_batch_no_adjacent(shuffled, 100, size);
+    const results = get_spread_batch_no_adjacent(shuffled, MAX_FINAL_PLAYLIST_SIZE, size);
 	
 	//results.forEach(element => console.log(element.added_by_id));
 	
