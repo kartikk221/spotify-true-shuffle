@@ -193,7 +193,7 @@ function get_spread_batch_no_adjacent(array, batch_size, sample_size) {
     // Handle scenario for less array items than batch size
     if (array.length < batch_size) return array;
 
-	const maxAltSearchs = 10;
+	const maxAltSearchs = 25;
 
     // Generate a random of batch of items picked randomly based on sample size based random increments
     let batch = [];
@@ -207,6 +207,7 @@ function get_spread_batch_no_adjacent(array, batch_size, sample_size) {
 		{
 			cursor += random_number(0, sample_size);
 			if (cursor >= array.length) cursor = wrap_number(cursor, 0, array.length - 1);
+			altSearchCounter++;
 		}
 		altSearchCounter = 0;
 
