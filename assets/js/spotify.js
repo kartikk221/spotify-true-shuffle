@@ -323,7 +323,7 @@ async function SpotifyAPI(token) {
                 uris: track_uris,
             }),
         });
-        await SPOTIFY_API.set_playlist_tracks(temporary.id, next);
+        await SPOTIFY_API.set_playlist_tracks(temporary.id, track_uris);
     };
 
     // Retrieve the profile from Spotify to validate the provided token
