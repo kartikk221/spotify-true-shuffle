@@ -93,7 +93,6 @@ async function SpotifyAPI(token) {
         image: track?.album?.images?.[0]?.url,
         artists: track?.artists?.map?.(({ name }) => name),
         release_date: track?.album?.release_date,
-		added_by_id: track?.added_by?.id,
     });
 
     // Define the method for retrieving the user's profile
