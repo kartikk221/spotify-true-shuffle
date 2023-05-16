@@ -191,7 +191,6 @@ function rearrangeAdjacent(arr)
      
     for(var i = 0; i < arr.length; i++)
     {
-		console.log(arr[i].added_by.id)
         if(mp.has(arr[i].added_by.id))
           mp.set(arr[i].added_by.id, mp.get(arr[i].added_by.id)+1)
         else
