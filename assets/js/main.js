@@ -61,7 +61,7 @@ async function shuffle_and_play() {
 	// Rearange Adjacent songs for songs added by the same person
 	const resultsNoAdjacent = rearrangeAdjacent(results);
 	
-    const uris = resultsNoAdjacent.map(({ uri }) => uri);
+    const uris = results.map(({ uri }) => uri);
 	
 
     // Store the shuffled results in a global variable for later use
