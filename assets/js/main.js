@@ -55,7 +55,7 @@ async function shuffle_and_play() {
     // Shuffle the songs array with a batch shuffle which batches with size up to 25 songs each batch
     ui_render_play_button('Shuffling Songs...', false);
     const size = Math.max(SHUFFLE_MAX_BATCH_SAMPLE_SIZE, Math.ceil(songs.length / 10));
-    const shuffled = songs.length <= 10 ? swap_shuffle(songs) : batch_swap_shuffle(songs, size);
+    const shuffled = songs.length <= 10 ? swap_shuffle_alt(songs, null) : batch_swap_shuffle(songs, size);
     const results = get_spread_batch(shuffled, 100, size);
 	
 	//results.forEach(element => console.log(element.added_by_id));

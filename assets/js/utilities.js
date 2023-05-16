@@ -116,6 +116,33 @@ function swap_shuffle(array) {
     return array;
 }
 
+function swap_shuffle_alt(array, prev_adder) {
+	// Handle scenario for less than 2 items
+	if (array.length < 2) return array;
+	
+	const maxAltSearchs = 10;
+	
+	var result = Array.from({ length: array.length }, () => ({}));
+	
+	// Perform a shuffle on the provided array
+    for (let i = 0; i < array.length; i++) {
+        // Determine a random index to insert that doesn't match previous adder
+        rand = random_number(0, array.length - 1);
+		for (let j = 0; j < maxAltSearchs; j++)
+		{
+			if (array[j] != prev_adder) break;
+			
+			rand = (2 ** j) + 15;
+		}
+		
+		result[i] = array[rand];
+		prev_adder = array[rand].added_by_id;
+    }
+
+    // Return the shuffled array
+    return result;
+}
+
 /**
  * Performs a swap shuffle on specified batch sizes in the provided array.
  *
@@ -129,10 +156,12 @@ function batch_swap_shuffle(array, size) {
     // Generate shuffled batches from the provided array
     const batches = [];
     const iterations = Math.ceil(array.length / size);
+	prev_adder = null;
     for (let i = 0; i < iterations; i++) {
         const batch = array.slice(i * size, i * size + size);
-        swap_shuffle(batch);
+        swap_shuffle_alt(batch, prev_adder);
         batches.push(batch);
+		prev_adder = batch[batch.length - 1];
     }
 
     // Return the batches as a single array
