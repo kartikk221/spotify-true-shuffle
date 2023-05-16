@@ -57,6 +57,9 @@ async function shuffle_and_play() {
     const size = Math.max(SHUFFLE_MAX_BATCH_SAMPLE_SIZE, Math.ceil(songs.length / 10));
     const shuffled = songs.length <= 10 ? swap_shuffle(songs, null) : batch_swap_shuffle(songs, size);
     const results = get_spread_batch(shuffled, 100, size);
+	
+	//results.forEach(element => console.log(element.added_by_id));
+	
     const uris = results.map(({ uri }) => uri);
 
     // Store the shuffled results in a global variable for later use
