@@ -97,16 +97,26 @@ function clamp_string(string, length, trail = '...') {
  * @param {Array} array
  * @returns {Array}
  */
-function swap_shuffle(array) {
+function swap_shuffle(array, previous_adder) {
     // Handle scenario for less than 2 items
     if (array.length < 2) return array;
 
+	const maxRandAttempts = 5;
+
     // Perform a swap shuffle on the provided array
     for (let i = 0; i < array.length; i++) {
-        // Determine a random index with which we will swap current element
-        const rand = random_number(0, array.length - 1);
-        const temp = array[rand];
-
+		// Attempt 5 times to find unique adder for next track
+		for (let i = 0; i < maxRandAttempts; i++)
+		{
+			// Determine a random index with which we will swap current element
+			const rand = random_number(0, array.length - 1);
+			const temp = array[rand];
+			
+			//If the adder is not the same as the last, add the track
+			if (temp.added_by_id != previous_adder) break;
+		}
+        
+        
         // Swap the current item with the randomly picked item
         array[rand] = array[i];
         array[i] = temp;
@@ -129,10 +139,12 @@ function batch_swap_shuffle(array, size) {
     // Generate shuffled batches from the provided array
     const batches = [];
     const iterations = Math.ceil(array.length / size);
+	prev_adder = null;
     for (let i = 0; i < iterations; i++) {
         const batch = array.slice(i * size, i * size + size);
-        swap_shuffle(batch);
+        swap_shuffle(batch, prev_adder);
         batches.push(batch);
+		prev_adder = batch[batch.length - 1];
     }
 
     // Return the batches as a single array
