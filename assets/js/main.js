@@ -57,12 +57,7 @@ async function shuffle_and_play() {
     const size = Math.max(SHUFFLE_MAX_BATCH_SAMPLE_SIZE, Math.ceil(songs.length / 10));
     const shuffled = songs.length <= 10 ? swap_shuffle(songs) : batch_swap_shuffle(songs, size);
     const results = get_spread_batch(shuffled, 100, size);
-	
-	// Rearange Adjacent songs for songs added by the same person
-	const resultsNoAdjacent = rearrangeAdjacent(results);
-	
     const uris = results.map(({ uri }) => uri);
-	
 
     // Store the shuffled results in a global variable for later use
     RECENT_SPOTIFY_SHUFFLED_TRACKS = results;
