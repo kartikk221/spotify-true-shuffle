@@ -130,7 +130,7 @@ function swap_shuffle_alt(array, prev_adder) {
         rand = random_number(0, array.length - 1);
 		for (let j = 0; j < maxAltSearchs; j++)
 		{
-			if (array[rand] != prev_adder) break;
+			if (array[j] != prev_adder) break;
 			
 			rand = (2 ** j) + 15;
 		}
