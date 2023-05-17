@@ -222,7 +222,7 @@ function bind_playables_listeners() {
  */
 async function save_to_playlist() {
     let uris = RECENT_SPOTIFY_SHUFFLED_TRACKS.map(({ uri }) => uri);
-    let PLAYLIST_NAME = TEMPORARY_SHUFFLED_PLAYLIST_NAME + " " + new Date().toLocaleString();
+    let PLAYLIST_NAME = "True Shuffle Playlist " + new Date().toLocaleString();
 
     // Create the shuffle results playlist
     try {
