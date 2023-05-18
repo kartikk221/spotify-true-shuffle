@@ -8,6 +8,8 @@ let TEMPORARY_SHUFFLED_PLAYLIST; // Caches the temporary shuffled playlist objec
 const TEMPORARY_SHUFFLED_PLAYLIST_NAME = 'True Shuffle Playlist'; // Default name for the temporary shuffled playlist
 const TEMPORARY_SHUFFLED_PLAYLIST_DESCRIPTION = `An Automatically Generated Playlist By True Shuffle from ${location.origin}`; // Default description for the temporary shuffled playlist
 
+
+
 /**
  * Begins the process of shuffling and playing music based on UI selected playlist/device.
  */
@@ -15,6 +17,9 @@ async function shuffle_and_play() {
     // Retrieve the selected playlist and device
     const device_id = document.getElementById('choose_device').value;
     const playlist_id = document.getElementById('choose_playlist').value;
+
+    // Clear the result message
+    ui_render_application_message('');
 
     // Retrieve the songs from the selected playlist
     let songs;
@@ -148,6 +153,9 @@ async function shuffle_and_play() {
 
     // Enable the UI button to allow the user to reshuffle and play music
     ui_render_play_button('Reshuffle & Play', true);
+
+    // Enable the UI button to allow the user to save results to a new playlist
+    ui_render_save_button('Save Results', true);
 }
 
 // Tracks the listeners that are bound to the UI elements that are responsible for playing music from a certain playable track
@@ -207,6 +215,48 @@ function bind_playables_listeners() {
             listener,
         });
     }
+}
+
+/**
+ * Saves the shuffled tracks to a new playlist .
+ */
+async function save_to_playlist() {
+    let uris = RECENT_SPOTIFY_SHUFFLED_TRACKS.map(({ uri }) => uri);
+    let PLAYLIST_NAME = "True Shuffle Playlist " + new Date().toLocaleString();
+    let playlist;
+
+    // Create the shuffle results playlist
+    try {
+        ui_render_save_button('Creating Playlist...', false);
+        playlist = await SPOTIFY_API.create_playlist(PLAYLIST_NAME, {
+            description: `True Shuffle results from ${new Date().toLocaleString()}`,
+            public: false,
+        });
+    } catch (error) {
+        ui_render_save_button('Save Results', true);
+        log('ERROR', 'Failed to create the shuffle results playlist.');
+        alert('Failed to create the shuffle results playlist.');
+        return console.log(error);
+    }
+
+    // Set the shuffled tracks into the playlist
+    try {
+        ui_render_save_button('Updating Playlist...', false);
+        await SPOTIFY_API.set_playlist_tracks(playlist.id, uris);
+    } catch (error) {
+        ui_render_save_button('Save Results', true);
+        log('ERROR', 'Failed to store shuffled tracks into the playlist.');
+        alert('Failed to store shuffled tracks into the playlist.');
+        return console.log(error);
+    }
+
+    // Disable the UI button after the playlist has been successfully created
+    ui_render_save_button('', false, false);
+
+    // Render the application message to alert the user
+    ui_render_application_message(`Your shuffled music has been placed inside a playlist called<br>
+    <strong>${PLAYLIST_NAME}</strong>.`);
+
 }
 
 /**
@@ -338,9 +388,8 @@ async function load_application() {
                 25
             );
             const playlist_owned_by_me = playlist.owner.me === true;
-            return `<option value="${playlist.id}">${playlist_name} - ${playlist_songs} Songs ${
-                playlist_owned_by_me ? '(By You)' : `(By ${playlist_author_name})`
-            }</option>`;
+            return `<option value="${playlist.id}">${playlist_name} - ${playlist_songs} Songs ${playlist_owned_by_me ? '(By You)' : `(By ${playlist_author_name})`
+                }</option>`;
         });
 
         // Render the devices in the UI selector
