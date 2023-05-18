@@ -26,7 +26,7 @@ function ui_render_play_button(tag, enabled = true) {
 
 /**
  * Renders the "Save Results" button in the main application with the specified tag, enabled and display.
- * 
+ *
  * @param {String} tag
  * @param {Boolean} enabled
  * @param {Boolean} display
@@ -51,21 +51,6 @@ function ui_render_application_message(content, enabled = true) {
     text.innerHTML = content;
     text.setAttribute('style', enabled ? '' : 'display: none');
 }
-
-const MONTH_NAMES = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-];
 
 function ui_render_queued_songs(songs, is_premium) {
     // Render the queued tracks into the results container

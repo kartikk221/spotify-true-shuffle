@@ -1,3 +1,19 @@
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTH_NAMES = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+];
+
 /**
  * Logs specified message to console in an organized log message
  *
@@ -172,4 +188,27 @@ function get_spread_batch(array, batch_size, sample_size) {
     }
 
     return batch;
+}
+
+/**
+ * Returns the date number prefix for a given month day.
+ */
+function get_month_date_prefix(day) {
+    // Ensure we receive a valid day
+    if (day < 1 || day > 31) throw new Error('Invalid day');
+
+    // Handle special cases
+    if (day >= 11 && day <= 13) return 'th';
+
+    // Return the prefix based on the day
+    switch (day % 10) {
+        case 1:
+            return 'st';
+        case 2:
+            return 'nd';
+        case 3:
+            return 'rd';
+        default:
+            return 'th';
+    }
 }
