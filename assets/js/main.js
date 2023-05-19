@@ -143,8 +143,7 @@ async function shuffle_and_play() {
         }
 
         // Render the application message to alert the user
-        ui_render_application_message(`Your shuffled music has been placed inside a
-        <strong>temporary</strong> playlist called
+        ui_render_application_message(`Your shuffled music has been placed inside of a playlist called
         <strong>${TEMPORARY_SHUFFLED_PLAYLIST_NAME}</strong>.`);
     }
 
