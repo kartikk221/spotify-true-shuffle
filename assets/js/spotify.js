@@ -313,7 +313,7 @@ async function SpotifyAPI(token) {
     instance.set_playlist_tracks = async (playlist_id, track_uris) => {
         // Make an API request to Spotify to update playlist's tracks
         return await instance._api_request({
-            method: 'POST',
+            method: 'PUT',
             endpoint: `/playlists/${playlist_id}/tracks`,
             body: JSON.stringify({
                 uris: track_uris,

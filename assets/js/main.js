@@ -2,11 +2,19 @@ let SPOTIFY_API; // Globally stores the Spotify API instance
 let SPOTIFY_USER_IS_PREMIUM; // Caches whether the Spotify user is a Premium user or not
 let SHUFFLE_MAX_BATCH_SAMPLE_SIZE = 50; // The sample size for batch shuffling of tracks
 let RECENT_SPOTIFY_PLAYBACK_DEVICE_ID; // Caches the device id of the Spotify player that most recently played shuffled tracks
+let RECENT_SPOTIFY_PLAYBACK_PLAYLIST_ID; // Caches the playlist id of the Spotify player that most recently played shuffled tracks
 let RECENT_SPOTIFY_SHUFFLED_TRACKS = []; // Caches the most recently shuffled tracks from Spotify
+const ARE_CREATED_PLAYLISTS_PUBLIC = false; // Determines whether created playlists are public or not by True Shuffle
 
 let TEMPORARY_SHUFFLED_PLAYLIST; // Caches the temporary shuffled playlist object to store free user shuffled tracks
 const TEMPORARY_SHUFFLED_PLAYLIST_NAME = 'True Shuffle Playlist'; // Default name for the temporary shuffled playlist
 const TEMPORARY_SHUFFLED_PLAYLIST_DESCRIPTION = `An Automatically Generated Playlist By True Shuffle from ${location.origin}`; // Default description for the temporary shuffled playlist
+
+// UI Buttons active text tags
+const UI_BUTTONS_TAGS = {
+    PLAY: 'Reshuffle & Play',
+    SAVE: 'Save To New Playlist',
+};
 
 /**
  * Begins the process of shuffling and playing music based on UI selected playlist/device.
@@ -15,6 +23,9 @@ async function shuffle_and_play() {
     // Retrieve the selected playlist and device
     const device_id = document.getElementById('choose_device').value;
     const playlist_id = document.getElementById('choose_playlist').value;
+
+    // Clear the result message
+    ui_render_application_message('');
 
     // Retrieve the songs from the selected playlist
     let songs;
@@ -42,7 +53,7 @@ async function shuffle_and_play() {
         // If there no songs to shuffle, then alert the user and return
         if (songs.length === 0) {
             log('ERROR', 'No songs to shuffle.');
-            ui_render_play_button('Reshuffle & Play', true);
+            ui_render_play_button(UI_BUTTONS_TAGS.PLAY, true);
             alert('No songs to shuffle. Please select a different playlist.');
             return;
         }
@@ -81,6 +92,9 @@ async function shuffle_and_play() {
     // Cache the user's premium status for later use
     SPOTIFY_USER_IS_PREMIUM = is_premium;
 
+    // Cache the selected playlist id for later use
+    RECENT_SPOTIFY_PLAYBACK_PLAYLIST_ID = playlist_id;
+
     // Spotify Premium User Scenario: Start playback with our shuffled results song uris
     if (is_premium) {
         try {
@@ -110,7 +124,7 @@ async function shuffle_and_play() {
                 ui_render_play_button('Creating Temporary Playlist...', false);
                 temporary = await SPOTIFY_API.create_playlist(TEMPORARY_SHUFFLED_PLAYLIST_NAME, {
                     description: TEMPORARY_SHUFFLED_PLAYLIST_DESCRIPTION,
-                    public: true,
+                    public: ARE_CREATED_PLAYLISTS_PUBLIC,
                 });
             } catch (error) {
                 log('ERROR', 'Failed to create temporary shuffle results playlist.');
@@ -132,8 +146,7 @@ async function shuffle_and_play() {
         }
 
         // Render the application message to alert the user
-        ui_render_application_message(`Your shuffled music has been placed inside a
-        <strong>temporary</strong> playlist called
+        ui_render_application_message(`Your shuffled music has been placed inside of a playlist called
         <strong>${TEMPORARY_SHUFFLED_PLAYLIST_NAME}</strong>.`);
     }
 
@@ -150,7 +163,10 @@ async function shuffle_and_play() {
     }
 
     // Enable the UI button to allow the user to reshuffle and play music
-    ui_render_play_button('Reshuffle & Play', true);
+    ui_render_play_button(UI_BUTTONS_TAGS.PLAY, true);
+
+    // Enable the UI button to allow the user to save results to a new playlist
+    ui_render_save_button(UI_BUTTONS_TAGS.SAVE, true);
 }
 
 // Tracks the listeners that are bound to the UI elements that are responsible for playing music from a certain playable track
@@ -198,7 +214,7 @@ function bind_playables_listeners() {
             }
 
             // Enable the UI button to allow the user to reshuffle and play music
-            ui_render_play_button('Reshuffle & Play', true);
+            ui_render_play_button(UI_BUTTONS_TAGS.PLAY, true);
         };
 
         // Bind the listener to the playable element
@@ -210,6 +226,61 @@ function bind_playables_listeners() {
             listener,
         });
     }
+}
+
+/**
+ * Saves the most recently shuffled tracks to a new playlist.
+ */
+async function save_to_playlist() {
+    // Retrieve the shuffled tracks uris from the most recent shuffle
+    const uris = RECENT_SPOTIFY_SHUFFLED_TRACKS.map(({ uri }) => uri);
+
+    // Retrieve the recently shuffled playlist
+    const playlists = await SPOTIFY_API.get_playlists();
+    const recent_playlist = playlists[RECENT_SPOTIFY_PLAYBACK_PLAYLIST_ID];
+
+    // Come up with a concise yet unique name for the shuffle results playlist
+    const date = new Date();
+    const day = date.getDate();
+    const hours = date.getHours() % 12 || 12;
+    const am_pm = date.getHours() >= 12 ? 'PM' : 'AM';
+    const minutes = date.getMinutes();
+    const month = MONTH_NAMES[date.getMonth()];
+    const day_prefix = get_month_date_prefix(day);
+    const name = `Shuffle Results From ${month.substring(0, 3)} ${day}${day_prefix}, ${hours}:${minutes} ${am_pm}`;
+
+    // Create the shuffle results playlist
+    let playlist;
+    try {
+        ui_render_save_button('Creating Playlist...', false);
+        playlist = await SPOTIFY_API.create_playlist(name, {
+            description: `True Shuffle generated results from the "${recent_playlist.name}" playlist with over ${recent_playlist.tracks.total} songs.`,
+            public: ARE_CREATED_PLAYLISTS_PUBLIC,
+        });
+    } catch (error) {
+        ui_render_save_button(UI_BUTTONS_TAGS.SAVE, true);
+        log('ERROR', 'Failed to create the shuffle results playlist.');
+        alert('Failed to create the shuffle results playlist.');
+        return console.log(error);
+    }
+
+    // Set the shuffled tracks into the playlist
+    try {
+        ui_render_save_button('Updating Playlist...', false);
+        await SPOTIFY_API.set_playlist_tracks(playlist.id, uris);
+    } catch (error) {
+        ui_render_save_button(UI_BUTTONS_TAGS.SAVE, true);
+        log('ERROR', 'Failed to store shuffled tracks into the playlist.');
+        alert('Failed to store shuffled tracks into the playlist.');
+        return console.log(error);
+    }
+
+    // Disable the UI button after the playlist has been successfully created
+    ui_render_save_button('', false, false);
+
+    // Render the application message to alert the user
+    ui_render_application_message(`Your shuffled music has been placed inside a new playlist called<br>
+    <strong>${name}</strong>.`);
 }
 
 /**
