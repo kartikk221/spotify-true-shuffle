@@ -207,7 +207,7 @@ function get_spread_batch_no_adjacent(array, batch_size, sample_size) {
     sample_size = Math.max(1, sample_size || Math.ceil(array.length / 10));
 
     // Handle scenario for less array items than batch size
-    if (array.length < batch_size) return array;
+    if (array.length < batch_size) batch_size = array.length;
 
 	const maxAltSearchs = 25;
 
@@ -219,12 +219,23 @@ function get_spread_batch_no_adjacent(array, batch_size, sample_size) {
 	let prev_adder = null;
     for (let i = 0; i < batch_size; i++) {
         // Randomly adjust the cursor and wrap it around if it passes array length
-        while (cache[cursor] || (array[cursor].added_by_id == prev_adder && altSearchCounter < maxAltSearchs)) 
+        while ((cache[cursor] || array[cursor].added_by_id == prev_adder) && altSearchCounter < maxAltSearchs) 
 		{
+            //if (cache[cursor]) console.log(array[cursor].added_by_id + " song is already in batch, curr search count: " + altSearchCounter);
+            //if (array[cursor].added_by_id == prev_adder) console.log(array[cursor].added_by_id + " matches previous, searching, curr search count: " + altSearchCounter);
 			cursor += random_number(0, sample_size);
 			if (cursor >= array.length) cursor = wrap_number(cursor, 0, array.length - 1);
 			altSearchCounter++;
 		}
+        //Backup if non-duplicate song replacement can't be found, allows for back-to-back same id
+        if (altSearchCounter == maxAltSearchs)
+        {
+            while (cache[cursor])
+            {
+                cursor++;
+                cursor %= array.length;
+            }
+        }
 		altSearchCounter = 0;
 
 		//if (array[cursor].added_by_id == prev_adder) console.log(i + ": " + array[cursor].added_by_id + " matches " + prev_adder + " but could not find replacement.");
