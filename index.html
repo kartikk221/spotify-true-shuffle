@@ -73,14 +73,6 @@
                     </div>
                 </div>
 
-                <div id="alt-shuffle-div">
-                    <div>
-                        <div class="col-lg-7 col-md-10 col-sm-12 m-auto mt-2">
-                            <input type="checkbox" id="alt-shuffle" name="alt-shuffle" value="True">
-                            <label for="alt-shuffle"> Avoid back-to-back same song adder</label><br>
-                        </div>
-                </div>
-
                 <div id="application_section" class="container p-4 pt-1" style="display: none">
                     <div class="row">
                         <div class="col-lg-7 col-md-10 col-sm-12 m-auto">
@@ -95,6 +87,14 @@
                                 <option value="default">Choose a Device</option>
                             </select>
                         </div>
+
+                        <div id="alt-shuffle-div" style="margin-top: 1em">
+                            <div class="col-lg-7 col-md-10 col-sm-12 m-auto mt-2">
+                                <input type="checkbox" id="alt-shuffle" name="alt-shuffle" value="True" />
+                                <label for="alt-shuffle">Do not repeat same songs across shuffles</label><br />
+                            </div>
+                        </div>
+
                         <div class="col-lg-7 col-md-10 col-sm-12 m-auto mt-2">
                             <button
                                 id="play_button"
@@ -103,9 +103,13 @@
                             >
                                 Shuffle & Play
                             </button>
-                            <button id="save_results" class="auth-button application-button" style="display: none"
-                            onclick="save_to_playlist(0)">
-                            Save Results
+                            <button
+                                id="save_results"
+                                class="auth-button application-button"
+                                style="display: none"
+                                onclick="save_to_playlist(0)"
+                            >
+                                Save Results
                             </button>
                             <p class="landing-message mt-4" id="application_message" style="display: none"></p>
                         </div>
