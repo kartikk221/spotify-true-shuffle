@@ -191,6 +191,64 @@ function get_spread_batch(array, batch_size, sample_size) {
 }
 
 /**
+ * Returns a batch array of specified batch_size length using random selections over the specified sample_size ranges.
+ * Attempts to select unique adder id's up to 10 times first to avoid adjacent adders. (Adder is person who adds track to a playlist)
+ *
+ * @param {Array} array
+ * @param {Number} batch_size
+ * @param {Number=} sample_size
+ * @returns {Array}
+ */
+function get_spread_batch_no_adjacent(array, batch_size, sample_size) {
+    // Ensure we receive a valid batch size
+    if (Number.isNaN(batch_size) || batch_size < 1) throw new Error('Invalid batch_size provided');
+
+    // Determine if a sample size automatically if one is not provided based on an array size of 100
+    sample_size = Math.max(1, sample_size || Math.ceil(array.length / 10));
+
+    // Handle scenario for less array items than batch size
+    if (array.length < batch_size) batch_size = array.length;
+
+	const maxAltSearchs = 25;
+
+    // Generate a random of batch of items picked randomly based on sample size based random increments
+    let batch = [];
+    let cache = {};
+    let cursor = random_number(0, array.length - 1);
+	let altSearchCounter = 0;
+	let prev_adder = null;
+    for (let i = 0; i < batch_size; i++) {
+        // Randomly adjust the cursor and wrap it around if it passes array length
+        while ((cache[cursor] || array[cursor].added_by_id == prev_adder) && altSearchCounter < maxAltSearchs) 
+		{
+            //if (cache[cursor]) console.log(array[cursor].added_by_id + " song is already in batch, curr search count: " + altSearchCounter);
+            //if (array[cursor].added_by_id == prev_adder) console.log(array[cursor].added_by_id + " matches previous, searching, curr search count: " + altSearchCounter);
+			cursor += random_number(0, sample_size);
+			if (cursor >= array.length) cursor = wrap_number(cursor, 0, array.length - 1);
+			altSearchCounter++;
+		}
+        //Backup if non-duplicate song replacement can't be found, allows for back-to-back same id
+        if (altSearchCounter == maxAltSearchs)
+        {
+            while (cache[cursor])
+            {
+                cursor++;
+                cursor %= array.length;
+            }
+        }
+		altSearchCounter = 0;
+
+		//if (array[cursor].added_by_id == prev_adder) console.log(i + ": " + array[cursor].added_by_id + " matches " + prev_adder + " but could not find replacement.");
+		//if (array[cursor].added_by_id != prev_adder) console.log(i + ": " + array[cursor].added_by_id + " does not match " + prev_adder + " so it was added.");
+        // Store the item at the cursor in our batch
+        cache[cursor] = true;
+        batch.push(array[cursor]);
+		prev_adder = array[cursor].added_by_id;
+    }
+
+    return batch;
+}
+/**
  * Returns the date number prefix for a given month day.
  */
 function get_month_date_prefix(day) {

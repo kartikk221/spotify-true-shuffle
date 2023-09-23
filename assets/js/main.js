@@ -24,6 +24,9 @@ async function shuffle_and_play() {
     const device_id = document.getElementById('choose_device').value;
     const playlist_id = document.getElementById('choose_playlist').value;
 
+    // Retrieve if alt-shuffle is enabled (no duplicant adders back-to-back for shared playlists)
+    const alt_shuffle = document.getElementById('alt-shuffle').checked;
+
     // Clear the result message
     ui_render_application_message('');
 
@@ -67,7 +70,18 @@ async function shuffle_and_play() {
     ui_render_play_button('Shuffling Songs...', false);
     const size = Math.max(SHUFFLE_MAX_BATCH_SAMPLE_SIZE, Math.ceil(songs.length / 10));
     const shuffled = songs.length <= 10 ? swap_shuffle(songs) : batch_swap_shuffle(songs, size);
-    const results = get_spread_batch(shuffled, 100, size);
+
+    let results;
+	
+    if (alt_shuffle) 
+    {
+        results = get_spread_batch_no_adjacent(shuffled, 100, size);
+    } else {
+        results = get_spread_batch(shuffled, 100, size);
+    }
+
+	//results.forEach(element => console.log(element.added_by_id));
+	
     const uris = results.map(({ uri }) => uri);
 
     // Store the shuffled results in a global variable for later use
