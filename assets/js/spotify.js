@@ -253,7 +253,9 @@ async function SpotifyAPI(token) {
 
         // Match the request's HTTP status code to one of the possible scenarios
         switch (response.status) {
-            case 204:
+            // Spotify has changed the return code from 204 to 200?
+            // I'll keep the dual case incase they decide to revert the change.
+            case 204: case 200:
                 return true;
             case 403:
                 return false;
