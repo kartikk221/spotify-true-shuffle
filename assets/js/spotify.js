@@ -323,6 +323,18 @@ async function SpotifyAPI(token) {
         });
     };
 
+    // Define the method for setting/updating a playlist's tracks
+    instance.add_playlist_tracks = async (playlist_id, track_uris) => {
+        // Make an API request to Spotify to update playlist's tracks
+        return await instance._api_request({
+            method: 'POST',
+            endpoint: `/playlists/${playlist_id}/tracks`,
+            body: JSON.stringify({
+                uris: track_uris,
+            }),
+        });
+    };
+
     // Retrieve the profile from Spotify to validate the provided token
     await instance.get_profile();
     return instance;

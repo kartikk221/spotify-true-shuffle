@@ -6,6 +6,17 @@ let RECENT_SPOTIFY_PLAYBACK_PLAYLIST_ID; // Caches the playlist id of the Spotif
 let RECENT_SPOTIFY_SHUFFLED_TRACKS = []; // Caches the most recently shuffled tracks from Spotify
 const ARE_CREATED_PLAYLISTS_PUBLIC = false; // Determines whether created playlists are public or not by True Shuffle
 
+//set checkboxes from cache
+window.addEventListener('DOMContentLoaded', () => {
+	if (localStorage.getItem('cache_button_state') !== null) {
+		document.getElementById('cache-full-list').checked = true;
+	}
+	if (localStorage.getItem('shuffle_button_state') !== null) {
+		document.getElementById('alt-shuffle').checked = true;
+	}
+});
+
+
 let TEMPORARY_SHUFFLED_PLAYLIST; // Caches the temporary shuffled playlist object to store free user shuffled tracks
 const TEMPORARY_SHUFFLED_PLAYLIST_NAME = 'True Shuffle Playlist'; // Default name for the temporary shuffled playlist
 const TEMPORARY_SHUFFLED_PLAYLIST_DESCRIPTION = `An Automatically Generated Playlist By True Shuffle from ${location.origin}`; // Default description for the temporary shuffled playlist
@@ -27,44 +38,75 @@ async function shuffle_and_play() {
     // Retrieve if alt-shuffle is enabled (no duplicant adders back-to-back for shared playlists)
     const alt_shuffle = document.getElementById('alt-shuffle').checked;
 
+	// Retrieve if cache-full-list is enabled
+    const cache_full_list = document.getElementById('cache-full-list').checked;
+
     // Clear the result message
     ui_render_application_message('');
 
     // Retrieve the songs from the selected playlist
     let songs;
-    try {
-        ui_render_play_button('Retrieving Songs...', false);
-        if (playlist_id === SPOTIFY_API._constants.LIKED_SONGS_PLAYLIST_ID) {
-            songs = await SPOTIFY_API.get_liked_tracks({
-                on_progress: (progress, total) => {
-                    // Update the UI to display progress of network fetches
-                    ui_render_play_button(`Retrieving Songs... [${progress} / ${total}]`, false);
-                },
-            });
-        } else {
-            songs = await SPOTIFY_API.get_playlist_tracks(playlist_id, {
-                on_progress: (progress, total) => {
-                    // Update the UI to display progress of network fetches
-                    ui_render_play_button(`Retrieving Songs... [${progress} / ${total}]`, false);
-                },
-            });
-        }
-
-        // Filter the retrieved songs to only include songs that are not local
-        songs = songs.filter((song) => !song.local);
-
-        // If there no songs to shuffle, then alert the user and return
-        if (songs.length === 0) {
-            log('ERROR', 'No songs to shuffle.');
-            ui_render_play_button(UI_BUTTONS_TAGS.PLAY, true);
-            alert('No songs to shuffle. Please select a different playlist.');
-            return;
-        }
-    } catch (error) {
-        log('ERROR', 'Failed to retrieve Spotify profile.');
-        alert('Failed to retrieve songs from Spotify. Refresh the page to try again.');
-        return console.log(error);
-    }
+	let cached_playlist_id;
+	let cached_playlist;
+	let cache_state = false;
+	
+	if (cache_full_list) { //cache button pressed and local storage supported
+		if (localStorage.getItem('playlist_id') !== null && localStorage.getItem('playlist') !== null) {
+			cached_playlist_id = localStorage.playlist_id;
+			cached_playlist = JSON.parse(localStorage.playlist);
+			if (cached_playlist_id == playlist_id) {//check if selected playlist is same as cached one
+				//run here if cache is OK
+				cache_state = true;
+				songs = cached_playlist;
+				localStorage.setItem('cache_button_state', 'True');
+			}
+		}		
+	} else { //remove button state
+		localStorage.removeItem('cache_button_state')
+	}
+	if (!cache_state) { //no cache
+		try {
+			ui_render_play_button('Retrieving Songs...', false);
+			if (playlist_id === SPOTIFY_API._constants.LIKED_SONGS_PLAYLIST_ID) {
+				songs = await SPOTIFY_API.get_liked_tracks({
+					on_progress: (progress, total) => {
+						// Update the UI to display progress of network fetches
+						ui_render_play_button(`Retrieving Songs... [${progress} / ${total}]`, false);
+					},
+				});
+			} else {
+				songs = await SPOTIFY_API.get_playlist_tracks(playlist_id, {
+					on_progress: (progress, total) => {
+						// Update the UI to display progress of network fetches
+						ui_render_play_button(`Retrieving Songs... [${progress} / ${total}]`, false);
+					},
+				});
+			}
+		} catch (error) {
+			log('ERROR', 'Failed to retrieve Spotify profile.');
+			alert('Failed to retrieve songs from Spotify. Refresh the page to try again.');
+			return console.log(error);
+		}
+		if (!cache_full_list) {
+			localStorage.removeItem('playlist_id')
+			localStorage.removeItem('playlist')
+		}
+	}
+	
+	// Filter the retrieved songs to only include songs that are not local
+	songs = songs.filter((song) => !song.local);
+	if (cache_full_list) {
+		localStorage.setItem('playlist_id', playlist_id);
+		localStorage.setItem('playlist', JSON.stringify(songs));
+	}
+	
+	// If there no songs to shuffle, then alert the user and return
+	if (songs.length === 0) {
+		log('ERROR', 'No songs to shuffle.');
+		ui_render_play_button(UI_BUTTONS_TAGS.PLAY, true);
+		alert('No songs to shuffle. Please select a different playlist.');
+		return;
+	}
 
     // Shuffle the songs array with a batch shuffle which batches with size up to 25 songs each batch
     ui_render_play_button('Shuffling Songs...', false);
@@ -75,9 +117,11 @@ async function shuffle_and_play() {
 	
     if (alt_shuffle) 
     {
-        results = get_spread_batch_no_adjacent(shuffled, 100, size);
+        results = get_spread_batch_no_adjacent(shuffled, 200, size);
+		localStorage.setItem('shuffle_button_state', 'True');
     } else {
-        results = get_spread_batch(shuffled, 100, size);
+        results = get_spread_batch(shuffled, 200, size);
+		localStorage.removeItem('shuffle_button_state')
     }
 
 	//results.forEach(element => console.log(element.added_by_id));
@@ -149,7 +193,21 @@ async function shuffle_and_play() {
         // Set the shuffled tracks into the temporary playlist
         try {
             ui_render_play_button('Updating Temporary Playlist...', false);
-            await SPOTIFY_API.set_playlist_tracks(temporary.id, uris);
+			console.log('shuffled playlist length = ' + uris.length);
+			await SPOTIFY_API.set_playlist_tracks(temporary.id, uris.splice(0,50));
+			await async_wait(500);
+			console.log('sleeping for second');
+			while (uris.length > 50) {
+				console.log('shuffled playlist length = ' + uris.length);
+				await SPOTIFY_API.add_playlist_tracks(temporary.id, uris.splice(0,50));
+				await async_wait(500);
+				console.log('sleeping for second');
+			}
+			if (uris !== 0) {
+				console.log('shuffled playlist length = ' + uris.length);
+				await SPOTIFY_API.add_playlist_tracks(temporary.id, uris);
+			}
+			console.log('songs added to playlist');
         } catch (error) {
             log('ERROR', 'Failed to store shuffled tracks into temporary playlist.');
             alert('Failed to store shuffled tracks into temporary playlist.');
@@ -161,11 +219,11 @@ async function shuffle_and_play() {
         <strong>${TEMPORARY_SHUFFLED_PLAYLIST_NAME}</strong>.`);
     }
 
-    // Render the queued tracks in the UI
-    ui_render_queued_songs(results, is_premium);
-
     // Ensure the user is a premium user to unlock certain advanced features
     if (is_premium) {
+		// Render the queued tracks in the UI
+		ui_render_queued_songs(results, is_premium);
+		
         // Bind the listeners to the UI elements that are responsible for playing music from a certain playable track
         bind_playables_listeners();
 
@@ -275,10 +333,25 @@ async function save_to_playlist() {
         return console.log(error);
     }
 
+
     // Set the shuffled tracks into the playlist
     try {
         ui_render_save_button('Updating Playlist...', false);
-        await SPOTIFY_API.set_playlist_tracks(playlist.id, uris);
+		console.log('shuffled playlist length = ' + uris.length);
+		await SPOTIFY_API.set_playlist_tracks(playlist.id, uris.splice(0,50));
+		await async_wait(500);
+		console.log('sleeping for second');
+		while (uris.length > 50) {
+			console.log('shuffled playlist length = ' + uris.length);
+			await SPOTIFY_API.add_playlist_tracks(playlist.id, uris.splice(0,50));
+			await async_wait(500);
+			console.log('sleeping for second');
+		}
+		if (uris !== 0) {
+			console.log('shuffled playlist length = ' + uris.length);
+			await SPOTIFY_API.add_playlist_tracks(playlist.id, uris);
+		}
+		console.log('songs added to playlist');
     } catch (error) {
         ui_render_save_button(UI_BUTTONS_TAGS.SAVE, true);
         log('ERROR', 'Failed to store shuffled tracks into the playlist.');
@@ -430,6 +503,14 @@ async function load_application() {
 
         // Render the devices in the UI selector
         document.getElementById('choose_playlist').innerHTML = rendered.join('\n');
+		if (localStorage.getItem('playlist_id') !== null) {
+			const playlistIds = Object.keys(playlists);
+			if (playlistIds.includes(localStorage.playlist_id)) {
+				document.getElementById('choose_playlist').value = localStorage.playlist_id;
+			} else {
+				console.log('saved playlist id does not exist anymore')
+			}
+		}
     } catch (error) {
         log('ERROR', 'Failed to retrieve Spotify playlists.');
         loading_message.innerText = 'Failed to retrieve Spotify playlists. Refresh the page to try again.';
@@ -443,6 +524,7 @@ async function load_application() {
     document.querySelector('.container').classList.add('authenticated');
     document.getElementById('application_section').setAttribute('style', '');
     document.getElementById('loader_container').setAttribute('style', 'display: none;');
+
 }
 
 window.addEventListener('load', () => {
