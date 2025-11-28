@@ -445,14 +445,14 @@ async function load_application() {
     document.getElementById('loader_container').setAttribute('style', 'display: none;');
 }
 
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
     // Ensure localStorage is available else browser is unsupported
     log('STARTUP', 'Checking for local storage support...');
     if (!local_storage_supported()) return ui_render_connect_button('Unsupported Browser', false);
 
     // Attempt to parse hash parameters from spotify for oauth callback
     log('STARTUP', 'Parsing authentication connection parameters from Spotify...');
-    auth_parse_connection_parameters();
+    await auth_parse_connection_parameters();
 
     // Determine if a valid access token is available and load application
     if (auth_get_access_token()) return load_application();
@@ -460,6 +460,6 @@ window.addEventListener('load', () => {
     // If the user has recently connected their account with the application, automatically reconnect with Spotify
     if (auth_has_recently_connected()) {
         log('STARTUP', 'User has recently connected their account with the application, redirecting to reconnect...');
-        auth_connect_spotify();
+        await auth_connect_spotify();
     }
 });

@@ -45,7 +45,9 @@ async function async_wait(milliseconds) {
  * @returns {String}
  */
 function random_string(size) {
-    return [...Array(Math.max(1, size))].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const values = crypto.getRandomValues(new Uint8Array(size));
+    return values.reduce((acc, x) => acc + possible[x % possible.length], "");
 }
 
 /**
